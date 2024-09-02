@@ -159,7 +159,7 @@ static int cmn_mmap(struct file *filp, struct vm_area_struct *vma)
     const unsigned long size = vma->vm_end - vma->vm_start;
     const unsigned long off = vma->vm_pgoff << PAGE_SHIFT;
 
-    if (off >= cmn_dev->io_size || size >= cmn_dev->io_size - off)
+    if (off >= cmn_dev->io_size || size > cmn_dev->io_size - off)
     {
         pr_err("Out of address range\n");
         return -EINVAL;
