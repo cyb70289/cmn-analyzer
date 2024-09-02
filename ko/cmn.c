@@ -202,6 +202,7 @@ static int __init cmn_init(void) {
         cmn_dev->misc_dev.name = kstrdup(dev_name, GFP_KERNEL);
         cmn_dev->misc_dev.minor = MISC_DYNAMIC_MINOR;
         cmn_dev->misc_dev.fops = &cmn_fops;
+        cmn_dev->misc_dev.mode = 0644;
         ret = misc_register(&cmn_dev->misc_dev);
         if (ret) {
             pr_err("Failed to register device %s\n", dev_name);
