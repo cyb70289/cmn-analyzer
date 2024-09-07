@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import logging
-from typing import Any, List, Tuple
+from typing import List, Tuple
 
 
 logger = logging.getLogger(__name__)
 
-# cannot use class directly as they are not defined yet, use class name instead
+# por_xxx_node_info
 _node_type = {
     0x0001: "_NodeDN",          # DVM
     0x0002: "_NodeCFG",         # CFG
@@ -26,6 +28,7 @@ _node_type = {
     0x1000: "_NodeAPB",         # APB
 }
 
+# por_mxp_device_port_connect_info_p0-5
 _device_type = {
     0b00000: "Reserved",
     0b00001: "RN-I",
@@ -61,18 +64,41 @@ _device_type = {
     0b11111: "Reserved",
 }
 
+
 class _NodeBase:
+    '''
+    exported members:
+    - parent:     xp parent is mesh, node parent is xp
+    - node_id:    cmn node id
+    - logical_id: cmn logical id
+    - p:          port id
+    - d:          device id
+    internal members:
+    - _iodrv:     io driver to read cmn registers
+    - _reg_base:  base address of node register space
+    '''
     def __init__(self, parent, node_info, reg_base:int) -> None:
         self.parent = parent
-        self.iodrv = parent.iodrv
-        self.reg_base = reg_base
+        self._iodrv = parent._iodrv
+        self._reg_base = reg_base
         # por_xxx_node_info
         self.node_id = node_info.bits(16, 31)
+        assert self.node_id < 4096
         self.logical_id = node_info.bits(32, 47)
         # por_xxx_child_info
-        child_info = self.iodrv.read(reg_base + 0x80)
-        self.child_count = child_info.bits(0, 15)
-        self.child_ptr_offset = child_info.bits(16, 31)
+        child_info = self._iodrv.read(reg_base + 0x80)
+        self._child_count = child_info.bits(0, 15)
+        self._child_ptr_offset = child_info.bits(16, 31)
+
+    # extract port/device no from node_id, not used by CFG and MXP
+    def update_port_device_no(self, port_count) -> None:
+        pd = self.node_id & 7
+        if port_count <= 2:
+            p, d = pd >> 2, pd & 3
+        else:
+            p, d = pd >> 1, pd & 1
+        self.p, self.d = p, d
+
 
 class _NodeDN(_NodeBase): type = "DVM"
 class _NodeDTC(_NodeBase): type = "DTC"
@@ -91,72 +117,163 @@ class _NodeCCLA(_NodeBase): type = "CCLA"
 class _NodeCCLA_RNI(_NodeBase): type = "CCLA_RNI"
 class _NodeAPB(_NodeBase): type = "APB"
 
+
 class _NodeCFG(_NodeBase):
+    '''
+    exported members:
+    - xps[x][y]: 2D array saves all cross points in mesh
+      * xdim = len(xps)
+      * ydim = len(xps[0])
+      * xps[i][j] -> _NodeMXP at mesh coordinate (i, j)
+    '''
     type = "CFG"
     def __init__(self, parent, node_info) -> None:
         super().__init__(parent, node_info, reg_base=0)
-        self.xp_list = []
-        # scan xp
-        logging.debug(f'found {self.child_count} cross points')
-        for i in range(self.child_count):
-            child_ptr_offset = self.child_ptr_offset + i*8
-            child_ptr = self.iodrv.read(child_ptr_offset)
+        xp_list = self._probe_xp()
+        self.xps = self._xp_list_to_array(xp_list)
+
+    def _probe_xp(self) -> List[_NodeMXP]:
+        xp_list = []
+        logging.debug(f'found {self._child_count} cross points')
+        for i in range(self._child_count):
+            child_ptr_offset = self._child_ptr_offset + i*8
+            child_ptr = self._iodrv.read(child_ptr_offset)
             xp_node_offset = child_ptr.bits(0, 29)
             is_external = child_ptr.bits(31, 31)
             if is_external:
                 logger.warning('ignore external node from root')
                 continue
-            xp_node_info = self.iodrv.read(xp_node_offset)
+            xp_node_info = self._iodrv.read(xp_node_offset)
             assert xp_node_info.bits(0, 15) == 0x0006  # XP
-            self.xp_list.append(_NodeMXP(self, xp_node_info, xp_node_offset))
+            xp_list.append(_NodeMXP(self, xp_node_info, xp_node_offset))
+        return xp_list
+
+    def _xp_list_to_array(self, xp_list) -> List[List[_NodeMXP]]:
+        def _get_mesh_dimension() -> Tuple[int, int]:
+            # XXX: dirty knowledge from linux arm-cmn driver
+            # - x-dim = xp.logical_id if xp.node_id == 8
+            # - x-dim = 1 if not exists(xp.node_id == 8)
+            xdim = 1
+            for xp in xp_list:
+                if xp.node_id == 8:
+                    xdim = xp.logical_id
+                    break
+            ydim = len(xp_list) // xdim
+            assert xdim * ydim == len(xp_list)
+            assert 0 < xdim <= 16
+            assert 0 < ydim <= 16
+            return xdim, ydim
+
+        xdim, ydim = _get_mesh_dimension()
+        logging.debug(f'dimension: x = {xdim}, y = {ydim}')
+        # caclulate x, y for all cross points and populate xps[x,y] 2D array
+        xps = [[None] * ydim for _ in range(xdim)]
+        for xp in xp_list:
+            xp.update(xdim, ydim)
+            xps[xp.x][xp.y] = xp
+        return xps   # type: ignore
+
 
 class _NodeMXP(_NodeBase):
+    '''
+    exported members:
+    - port_devs[]: type and number of devices connected to all ports
+      * len(port_devs) -> number of ports with devices connected
+      * port_devs[i]   -> (_device_type:str, device_count:int) at i-th port
+      * NOTE: device_count may be 0, ignore these devices
+    - x, y: coordinate of this xp in mesh
+    - child_nodes: a dict tells child nodes associated with a device
+      * multiple child nodes can be found for a single device
+        NOTE: por_mxp_p0-5_info says there's one device attached to a port
+              but there can be multiple child nodes to that port/device
+              e.g., a HN-F device can have three nodes associated:
+                    HN-F, HN-F_MPAM_S and HN-F_MPAM_NS
+      * key = (port_id, device_id)
+      * val = list of child nodes related to that device
+    '''
     type = "XP"
     def __init__(self, parent, node_info, reg_base:int) -> None:
         logging.debug('Probing cross point ...')
         super().__init__(parent, node_info, reg_base)
-        assert (self.node_id & 7) == 0 and (self.node_id >> 11) == 0
+        # least 3 bits (port, device) of XP node id must be 0
+        assert (self.node_id & 7) == 0
         logging.debug(f'nodeid = {self.node_id}')
         port_count = node_info.bits(48, 51)
         logging.debug(f'ports = {port_count}')
-        # ports: [("dev_type", dev_count)], dev_count may be 0
-        self.ports = self._probe_ports(port_count, reg_base)
-        # nodes: [_NodeHNF(), _NodeRND(), ...], RNF/SNF not in nodes
-        self.nodes = self._probe_devices(reg_base)
+        # port_devs: [("dev_type", dev_count)], dev_count may be 0
+        self.port_devs = self._probe_ports(port_count, reg_base)
+        # _child_nodes: [_NodeHNF(), _NodeRND(), ...], RNF/SNF not included
+        self._child_nodes = self._probe_devices(reg_base)
         logging.debug('---------------------------')
+
+    def update(self, xdim:int, ydim:int) -> None:
+        logging.debug(f'Updating cross point {self.node_id} ...')
+        self.x, self.y = self._update_xypd(xdim, ydim)
+        # child_nodes: {(port_id, dev_id): [nodes]}
+        self.child_nodes = self._populate_child_nodes()
+        logging.debug('~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+
+    # calculate x,y of all cross points and p,d for all child nodes
+    def _update_xypd(self, xdim:int, ydim:int) -> Tuple[int, int]:
+        xshift = (max(xdim, ydim) - 1).bit_length()
+        if xshift < 2: xshift = 2
+        xy_id = self.node_id >> 3
+        x = xy_id >> xshift
+        y = xy_id & ((1 << xshift) - 1)
+        logging.debug(f'x = {x}, y = {y}')
+        for node in self._child_nodes:
+            node.update_port_device_no(len(self.port_devs))
+        return x, y
+
+    def _populate_child_nodes(self) -> Dict[Tuple[int, int], List[_NodeBase]]:
+        child_nodes = {}
+        for p, (dev_type, dev_count) in enumerate(self.port_devs):
+            logging.debug(f'port{p}: type={dev_type}, dev_count={dev_count}')
+            for d in range(dev_count):
+                child_nodes[(p, d)] = []
+        for i, node in enumerate(self._child_nodes):
+            if (node.p, node.d) not in child_nodes:
+                logging.warning('ignore out of bound child node '
+                                f'(p={node.p}, d={node.d}), type={node.type}')
+                continue
+            logging.debug(f'child{i}: p={node.p}, d={node.d}, '
+                          f'dev_type={self.port_devs[node.p][0]}, '
+                          f'node_type={node.type}')
+            child_nodes[(node.p, node.d)].append(node)
+        return child_nodes
 
     def _probe_ports(self, port_count:int, reg_base:int) \
         -> List[Tuple[str, int]]:
         # XXX: shall we scan all the 6 port? it depends on whether there will
         #      be "holes"? e.g., port0 and port2 has device, but not port1
-        ports = []
+        port_devs = []
         for i in range(port_count):
             # por_mxp_device_port_connect_info_p0-5
-            port_conn_info = self.iodrv.read(reg_base + 8 + i*8)
-            # XXX: fail loudly if device type not suported
+            port_conn_info = self._iodrv.read(reg_base + 8 + i*8)
+            # fail loud if device type not suported
             dev_type = _device_type[port_conn_info.bits(0, 4)]
             # por_mxp_p0-5_info
-            port_info = self.iodrv.read(reg_base + 0x900 + i*16)
+            port_info = self._iodrv.read(reg_base + 0x900 + i*16)
             dev_count = port_info.bits(0, 2)
-            ports.append((dev_type, dev_count))
+            port_devs.append((dev_type, dev_count))
             if dev_count > 0:
                 # strip extensions for log output: RN-F_CHID_ESAM -> RN-F
                 dev_type = dev_type.split('_', 1)[0]
                 logging.debug(f'p{i}: {dev_type}, {dev_count}')
-        return ports
+        return port_devs
 
     def _probe_devices(self, reg_base:int) -> List[_NodeBase]:
-        logging.debug(f'childs = {self.child_count}')
+        logging.debug(f'childs = {self._child_count}')
         nodes = []
-        for i in range(self.child_count):
-            child_ptr_off = reg_base + self.child_ptr_offset + i*8
-            child_ptr = self.iodrv.read(child_ptr_off)
+        for i in range(self._child_count):
+            child_ptr_off = reg_base + self._child_ptr_offset + i*8
+            child_ptr = self._iodrv.read(child_ptr_off)
             dev_node_offset = child_ptr.bits(0, 29)
             is_external = child_ptr.bits(31, 31)
             if is_external:
                 logger.warning(f'XP{self.node_id}:ignore external node')
                 continue
-            dev_node_info = self.iodrv.read(dev_node_offset)
+            dev_node_info = self._iodrv.read(dev_node_offset)
             dev_node_type = dev_node_info.bits(0, 15)
             if dev_node_type not in _node_type:
                 logger.warning(f'XP{self.node_id}:ignore unknown node type '
@@ -171,53 +288,7 @@ class _NodeMXP(_NodeBase):
 
 class Mesh:
     def __init__(self, iodrv) -> None:
-        self.iodrv = iodrv
+        self._iodrv = iodrv
         node_info = iodrv.read(0)
         assert node_info.bits(0, 15) == 0x0002  # CFG
         self.root_node = _NodeCFG(self, node_info)
-
-    # depth first search sub-nodes recursively
-    @classmethod
-    def _walk_node(cls, node, visitor):
-        for child in node.children:
-            cls._walk_node(child, visitor)
-        visitor(node)
-
-    def _get_xy_dim(self):
-        # XXX: dirty knowledge from linux arm-cmn driver
-        # - x-dim = xp.logical_id if xp.node_id == 8
-        # - x-dim = 1 if not exists(xp.node_id == 8)
-        class DimVisitor:
-            def __init__(self):
-                self.xdim = 1
-                self.xp_count = 0
-            def __call__(self, node):
-                if node.type_name == _XpNode.type_name:
-                    self.xp_count += 1
-                    if node.nid == 8:
-                        self.xdim = node.lid
-        dim_visitor = DimVisitor()
-        Mesh._walk_node(self.root_node, dim_visitor)
-        self.xdim = dim_visitor.xdim
-        self.ydim = dim_visitor.xp_count // self.xdim
-        assert self.xdim * self.ydim == dim_visitor.xp_count
-        assert 0 < self.xdim <= 16
-        assert 0 < self.ydim <= 16
-        logging.debug(f'xdim = {self.xdim}, ydim = {self.ydim}')
-
-    # calculate x,y for each node, we CANNOT do it during the discovery process
-    # because x,y dimension is not known until all XPs are probed, what a mess!
-    def _calc_node_xy(self):
-        class XyVisitor:
-            def __call__(self, node):
-                node.x, node.y = xy_from_nid(node.nid)
-                assert 0 <= node.x < mesh.xdim
-                assert 0 <= node.y < mesh.ydim
-        mesh = self
-        xy_bit_len = (max(self.xdim, self.ydim) - 1).bit_length()
-        if xy_bit_len < 2: xy_bit_len = 2
-        y_bit_range = (3, 3+xy_bit_len-1)
-        x_bit_range = (3+xy_bit_len, 3+2*xy_bit_len-1)
-        xy_from_nid = lambda nid: (_extract_bits(nid, *x_bit_range),
-                                   _extract_bits(nid, *y_bit_range))
-        Mesh._walk_node(self.root_node, XyVisitor())
