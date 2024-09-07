@@ -61,8 +61,7 @@ static acpi_status __init cmn_get_acpi_resource(struct acpi_resource *res,
             cmn_dev->io_base = base;
             cmn_dev->io_size = size;
         } else {
-            pr_err("Invalid CMN resource\n");
-            return AE_ERROR;
+            pr_warn("Duplicated CMN resource\n");
         }
     }
     return AE_OK;
