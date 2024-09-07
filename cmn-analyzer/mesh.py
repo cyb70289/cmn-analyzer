@@ -104,7 +104,7 @@ class _NodeCFG(_NodeBase):
             xp_node_offset = child_ptr.bits(0, 29)
             is_external = child_ptr.bits(31, 31)
             if is_external:
-                logger.warning('external node skipped')
+                logger.warning('ignore external node from root')
                 continue
             xp_node_info = self.iodrv.read(xp_node_offset)
             assert xp_node_info.bits(0, 15) == 0x0006  # XP
@@ -133,6 +133,7 @@ class _NodeMXP(_NodeBase):
         for i in range(port_count):
             # por_mxp_device_port_connect_info_p0-5
             port_conn_info = self.iodrv.read(reg_base + 8 + i*8)
+            # XXX: fail loudly if device type not suported
             dev_type = _device_type[port_conn_info.bits(0, 4)]
             # por_mxp_p0-5_info
             port_info = self.iodrv.read(reg_base + 0x900 + i*16)
@@ -153,10 +154,15 @@ class _NodeMXP(_NodeBase):
             dev_node_offset = child_ptr.bits(0, 29)
             is_external = child_ptr.bits(31, 31)
             if is_external:
-                logger.warning('external node skipped')
+                logger.warning(f'XP{self.node_id}:ignore external node')
                 continue
             dev_node_info = self.iodrv.read(dev_node_offset)
-            dev_node_class_name = _node_type[dev_node_info.bits(0, 15)]
+            dev_node_type = dev_node_info.bits(0, 15)
+            if dev_node_type not in _node_type:
+                logger.warning(f'XP{self.node_id}:ignore unknown node type '
+                               f'0x{dev_node_type:04X}')
+                continue
+            dev_node_class_name = _node_type[dev_node_type]
             dev_node_class = globals()[dev_node_class_name]
             dev_node = dev_node_class(self, dev_node_info, dev_node_offset)
             nodes.append(dev_node)
