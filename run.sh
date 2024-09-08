@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if ! ls /dev/armcmn:* > /dev/null 2>&1; then
-    echo "cmnctl kernel module not loaded!"
+    echo "cmn-analyzer kernel module not loaded!"
     exit 1
 fi
 

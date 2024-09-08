@@ -14,12 +14,14 @@ def parse_args():
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Enable verbose logging')
     args = parser.parse_args()
-    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
     return args
 
 
 def main():
     args = parse_args()
+
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
+                        format='%(levelname)s:%(module)s:%(message)s')
 
     iodrv = CmnIodrv(args.mesh)
     mesh = Mesh(iodrv)

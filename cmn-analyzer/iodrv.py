@@ -1,8 +1,6 @@
 import glob
 import mmap
-import os
 import struct
-import typing
 
 
 class _cmn_register:
@@ -29,10 +27,10 @@ class CmnIodrv:
         dev_file = dev_files[0]
         size = int(dev_file.split(':')[-1], 16)
         with open(dev_file, 'rb') as f:
-            self.io_base = mmap.mmap(f.fileno(), size, prot=mmap.PROT_READ)
+            self.io_base = mmap.mmap(f.fileno(), size, access=mmap.ACCESS_READ)
         self.io_size = size
 
-    def read(self, reg) -> int:
+    def read(self, reg) -> _cmn_register:
         assert reg + 8 <= self.io_size
         data = self.io_base[reg:reg+8]
         reg_val = struct.unpack('<Q', data)[0]

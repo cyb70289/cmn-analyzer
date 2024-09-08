@@ -1,67 +1,67 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 
 logger = logging.getLogger(__name__)
 
 # por_xxx_node_info
 _node_type = {
-    0x0001: "_NodeDN",          # DVM
-    0x0002: "_NodeCFG",         # CFG
-    0x0003: "_NodeDTC",         # DTC
-    0x0004: "_NodeHNI",         # HN-I
-    0x0005: "_NodeHNF",         # HN-F
-    0x0006: "_NodeMXP",         # XP
-    0x0007: "_NodeSBSX",        # SBSX
-    0x0008: "_NodeHNF_MPAM_S",  # HN-F_MPAM_S
-    0x0009: "_NodeHNF_MPAM_NS", # HN-F_MPAN_NS
-    0x000A: "_NodeRNI",         # RN-I
-    0x000D: "_NodeRND",         # RN-D
-    0x000F: "_NodeRN_SAM",      # RN-SAM
-    0x0011: "_NodeHN_P",        # HN-P (no document)
-    0x0103: "_NodeCCG_RA",      # CCG_RA
-    0x0104: "_NodeCCG_HA",      # CCG_HA
-    0x0105: "_NodeCCLA",        # CCLA
-    0x0106: "_NodeCCLA_RNI",    # CCLA_RNI (no document)
-    0x1000: "_NodeAPB",         # APB
+    0x0001: '_NodeDN',          # DVM
+    0x0002: '_NodeCFG',         # CFG
+    0x0003: '_NodeDTC',         # DTC
+    0x0004: '_NodeHNI',         # HN-I
+    0x0005: '_NodeHNF',         # HN-F
+    0x0006: '_NodeMXP',         # XP
+    0x0007: '_NodeSBSX',        # SBSX
+    0x0008: '_NodeHNF_MPAM_S',  # HN-F_MPAM_S
+    0x0009: '_NodeHNF_MPAM_NS', # HN-F_MPAN_NS
+    0x000A: '_NodeRNI',         # RN-I
+    0x000D: '_NodeRND',         # RN-D
+    0x000F: '_NodeRN_SAM',      # RN-SAM
+    0x0011: '_NodeHN_P',        # HN-P (no document)
+    0x0103: '_NodeCCG_RA',      # CCG_RA
+    0x0104: '_NodeCCG_HA',      # CCG_HA
+    0x0105: '_NodeCCLA',        # CCLA
+    0x0106: '_NodeCCLA_RNI',    # CCLA_RNI (no document)
+    0x1000: '_NodeAPB',         # APB
 }
 
 # por_mxp_device_port_connect_info_p0-5
 _device_type = {
-    0b00000: "Reserved",
-    0b00001: "RN-I",
-    0b00010: "RN-D",
-    0b00011: "Reserved",
-    0b00100: "RN-F_CHIB",
-    0b00101: "RN-F_CHIB_ESAM",
-    0b00110: "RN-F_CHIA",
-    0b00111: "RN-F_CHIA_ESAM",
-    0b01000: "HN-T",
-    0b01001: "HN-I",
-    0b01010: "HN-D",
-    0b01011: "HN-P",
-    0b01100: "SN-F_CHIC",
-    0b01101: "SBSX",
-    0b01110: "HN-F",
-    0b01111: "SN-F_CHIE",
-    0b10000: "SN-F_CHID",
-    0b10001: "CXHA",
-    0b10010: "CXRA",
-    0b10011: "CXRH",
-    0b10100: "RN-F_CHID",
-    0b10101: "RN-F_CHID_ESAM",
-    0b10110: "RN-F_CHIC",
-    0b10111: "RN-F_CHIC_ESAM",
-    0b11000: "RN-F_CHIE",
-    0b11001: "RN-F_CHIE_ESAM",
-    0b11010: "Reserved",
-    0b11011: "Reserved",
-    0b11100: "MTSX",
-    0b11101: "HN-V",
-    0b11110: "CCG",
-    0b11111: "Reserved",
+    0b00000: 'Reserved',
+    0b00001: 'RN-I',
+    0b00010: 'RN-D',
+    0b00011: 'Reserved',
+    0b00100: 'RN-F_CHIB',
+    0b00101: 'RN-F_CHIB_ESAM',
+    0b00110: 'RN-F_CHIA',
+    0b00111: 'RN-F_CHIA_ESAM',
+    0b01000: 'HN-T',
+    0b01001: 'HN-I',
+    0b01010: 'HN-D',
+    0b01011: 'HN-P',
+    0b01100: 'SN-F_CHIC',
+    0b01101: 'SBSX',
+    0b01110: 'HN-F',
+    0b01111: 'SN-F_CHIE',
+    0b10000: 'SN-F_CHID',
+    0b10001: 'CXHA',
+    0b10010: 'CXRA',
+    0b10011: 'CXRH',
+    0b10100: 'RN-F_CHID',
+    0b10101: 'RN-F_CHID_ESAM',
+    0b10110: 'RN-F_CHIC',
+    0b10111: 'RN-F_CHIC_ESAM',
+    0b11000: 'RN-F_CHIE',
+    0b11001: 'RN-F_CHIE_ESAM',
+    0b11010: 'Reserved',
+    0b11011: 'Reserved',
+    0b11100: 'MTSX',
+    0b11101: 'HN-V',
+    0b11110: 'CCG',
+    0b11111: 'Reserved',
 }
 
 
@@ -77,6 +77,7 @@ class _NodeBase:
     - _iodrv:     io driver to read cmn registers
     - _reg_base:  base address of node register space
     '''
+    type = 'NA'
     def __init__(self, parent, node_info, reg_base:int) -> None:
         self.parent = parent
         self._iodrv = parent._iodrv
@@ -100,22 +101,22 @@ class _NodeBase:
         self.p, self.d = p, d
 
 
-class _NodeDN(_NodeBase): type = "DVM"
-class _NodeDTC(_NodeBase): type = "DTC"
-class _NodeHNI(_NodeBase): type = "HN-I"
-class _NodeHNF(_NodeBase): type = "HN-F"
-class _NodeSBSX(_NodeBase): type = "SBSX"
-class _NodeHNF_MPAM_S(_NodeBase): type = "HN-F_MPAM_S"
-class _NodeHNF_MPAM_NS(_NodeBase): type = "HN-F_MPAN_NS"
-class _NodeRNI(_NodeBase): type = "RN-I"
-class _NodeRND(_NodeBase): type = "RN-D"
-class _NodeRN_SAM(_NodeBase): type = "RN-SAM"
-class _NodeHN_P(_NodeBase): type = "HN-P"
-class _NodeCCG_RA(_NodeBase): type = "CCG_RA"
-class _NodeCCG_HA(_NodeBase): type = "CCG_HA"
-class _NodeCCLA(_NodeBase): type = "CCLA"
-class _NodeCCLA_RNI(_NodeBase): type = "CCLA_RNI"
-class _NodeAPB(_NodeBase): type = "APB"
+class _NodeDN(_NodeBase): type = 'DVM'
+class _NodeDTC(_NodeBase): type = 'DTC'
+class _NodeHNI(_NodeBase): type = 'HN-I'
+class _NodeHNF(_NodeBase): type = 'HN-F'
+class _NodeSBSX(_NodeBase): type = 'SBSX'
+class _NodeHNF_MPAM_S(_NodeBase): type = 'HN-F_MPAM_S'
+class _NodeHNF_MPAM_NS(_NodeBase): type = 'HN-F_MPAN_NS'
+class _NodeRNI(_NodeBase): type = 'RN-I'
+class _NodeRND(_NodeBase): type = 'RN-D'
+class _NodeRN_SAM(_NodeBase): type = 'RN-SAM'
+class _NodeHN_P(_NodeBase): type = 'HN-P'
+class _NodeCCG_RA(_NodeBase): type = 'CCG_RA'
+class _NodeCCG_HA(_NodeBase): type = 'CCG_HA'
+class _NodeCCLA(_NodeBase): type = 'CCLA'
+class _NodeCCLA_RNI(_NodeBase): type = 'CCLA_RNI'
+class _NodeAPB(_NodeBase): type = 'APB'
 
 
 class _NodeCFG(_NodeBase):
@@ -126,7 +127,7 @@ class _NodeCFG(_NodeBase):
       * ydim = len(xps[0])
       * xps[i][j] -> _NodeMXP at mesh coordinate (i, j)
     '''
-    type = "CFG"
+    type = 'CFG'
     def __init__(self, parent, node_info) -> None:
         super().__init__(parent, node_info, reg_base=0)
         xp_list = self._probe_xp()
@@ -191,7 +192,7 @@ class _NodeMXP(_NodeBase):
       * key = (port_id, device_id)
       * val = list of child nodes related to that device
     '''
-    type = "XP"
+    type = 'XP'
     def __init__(self, parent, node_info, reg_base:int) -> None:
         logging.debug('Probing cross point ...')
         super().__init__(parent, node_info, reg_base)
@@ -200,7 +201,7 @@ class _NodeMXP(_NodeBase):
         logging.debug(f'nodeid = {self.node_id}')
         port_count = node_info.bits(48, 51)
         logging.debug(f'ports = {port_count}')
-        # port_devs: [("dev_type", dev_count)], dev_count may be 0
+        # port_devs: [('dev_type', dev_count)], dev_count may be 0
         self.port_devs = self._probe_ports(port_count, reg_base)
         # _child_nodes: [_NodeHNF(), _NodeRND(), ...], RNF/SNF not included
         self._child_nodes = self._probe_devices(reg_base)
@@ -234,7 +235,8 @@ class _NodeMXP(_NodeBase):
         for i, node in enumerate(self._child_nodes):
             if (node.p, node.d) not in child_nodes:
                 logging.warning('ignore out of bound child node '
-                                f'(p={node.p}, d={node.d}), type={node.type}')
+                                f'at XP{self.node_id} port{node.p} '
+                                f'device{node.d} {node.type}')
                 continue
             logging.debug(f'child{i}: p={node.p}, d={node.d}, '
                           f'dev_type={self.port_devs[node.p][0]}, '
