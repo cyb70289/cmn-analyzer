@@ -190,7 +190,7 @@ class _NodeMXP(_NodeBase):
               e.g., a HN-F device can have three nodes associated:
                     HN-F, HN-F_MPAM_S and HN-F_MPAM_NS
       * key = (port_id, device_id)
-      * val = list of child nodes related to that device
+      * val = list of child nodes for this device, may be empty for SNF/RNF
     '''
     type = 'XP'
     def __init__(self, parent, node_info, reg_base:int) -> None:
@@ -206,6 +206,22 @@ class _NodeMXP(_NodeBase):
         # _child_nodes: [_NodeHNF(), _NodeRND(), ...], RNF/SNF not included
         self._child_nodes = self._probe_devices(reg_base)
         logging.debug('---------------------------')
+
+    def get_dev_node_id(self, p:int, d:int) -> int:
+        port_count = len(self.port_devs)
+        if port_count <= 2:
+            assert 0 <= p <= 1 and 0 <= d <= 3
+            node_id = (p << 2) | d
+        else:
+            assert 0 <= p <= 3 and 0 <= d <= 1
+            node_id = (p << 1) | d
+        node_id += self.node_id
+        # verify node_id against info from child node
+        # NOTE: SNF, RNF may not have related child node
+        child_nodes = self.child_nodes[(p, d)]
+        if child_nodes:
+            assert node_id == child_nodes[0].node_id
+        return node_id
 
     def update(self, xdim:int, ydim:int) -> None:
         logging.debug(f'Updating cross point {self.node_id} ...')
@@ -306,14 +322,19 @@ class Mesh:
                         'x': 0,
                         'y': 0,
                         'node_id': 0,
-                        'logical_id': 0,
-                        'ports': [p0, p1],
+                        'ports': [port0, port1],
                       }           |
                                   |
                                   +-> {
                                         'type': 'RN-F',
-                                        'devices': 2,
-                                      }
+                                        'devices': [dev0, dev1]
+                                      }             |
+                                                    |
+                                                    +-> {
+                                                            'p': 0,
+                                                            'd': 0,
+                                                            'node_id': 0,
+                                                        }
         '''
         mesh_info = {}
         xps = self.root_node.xps
@@ -326,14 +347,20 @@ class Mesh:
                     'x': xp.x,
                     'y': xp.y,
                     'node_id': xp.node_id,
-                    'logical_id': xp.logical_id,
                     'ports': [],
                 }
-                for port_dev in xp.port_devs:
+                for p, port_dev in enumerate(xp.port_devs):
+                    port_type, dev_count = port_dev
                     port_info = {
-                        'type': port_dev[0],
-                        'devices': port_dev[1],
+                        'type': port_type,
+                        'devices': [],
                     }
+                    for d in range(dev_count):
+                        port_info['devices'].append({
+                            'p': p,
+                            'd': d,
+                            'node_id': xp.get_dev_node_id(p, d),
+                        })
                     xp_info['ports'].append(port_info)
                 xp_list[x].append(xp_info)
         mesh_info['xp'] = xp_list
