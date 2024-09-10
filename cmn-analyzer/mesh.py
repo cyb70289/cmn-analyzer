@@ -294,3 +294,47 @@ class Mesh:
         node_info = iodrv.read(0)
         assert node_info.bits(0, 15) == 0x0002  # CFG
         self.root_node = _NodeCFG(self, node_info)
+
+    def info(self):
+        '''
+        return mesh_info = {
+          'dim': {'x': 2, 'y': 2},
+          'xp': [[xp00, xp01], [xp10, xp11]]
+        }         |
+                  |
+                  +-> {
+                        'x': 0,
+                        'y': 0,
+                        'node_id': 0,
+                        'logical_id': 0,
+                        'ports': [p0, p1],
+                      }           |
+                                  |
+                                  +-> {
+                                        'type': 'RN-F',
+                                        'devices': 2,
+                                      }
+        '''
+        mesh_info = {}
+        xps = self.root_node.xps
+        mesh_info['dim'] = {'x': len(xps), 'y': len(xps[0])}
+        xp_list = []
+        for x, col in enumerate(xps):
+            xp_list.append([])
+            for y, xp in enumerate(col):
+                xp_info = {
+                    'x': xp.x,
+                    'y': xp.y,
+                    'node_id': xp.node_id,
+                    'logical_id': xp.logical_id,
+                    'ports': [],
+                }
+                for port_dev in xp.port_devs:
+                    port_info = {
+                        'type': port_dev[0],
+                        'devices': port_dev[1],
+                    }
+                    xp_info['ports'].append(port_info)
+                xp_list[x].append(xp_info)
+        mesh_info['xp'] = xp_list
+        return mesh_info
