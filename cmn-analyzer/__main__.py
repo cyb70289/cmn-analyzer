@@ -18,9 +18,9 @@ def parse_args():
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='enable verbose logging')
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-o', '--output', type=str,
+    group.add_argument('-o', '--output', type=str, metavar='file',
                        help='save mesh info to a JSON file')
-    group.add_argument('-i', '--input', type=str,
+    group.add_argument('-i', '--input', type=str, metavar='file',
                        help='read mesh info from JSON file')
     args = parser.parse_args()
     return args
