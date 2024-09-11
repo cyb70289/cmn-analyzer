@@ -1,0 +1,1606 @@
+{
+  "dim": {
+    "x": 4,
+    "y": 10
+  },
+  "xp": [
+    [
+      {
+        "x": 0,
+        "y": 0,
+        "node_id": 0,
+        "ports": [
+          {
+            "type": "RN-I",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 0
+              }
+            ]
+          },
+          {
+            "type": "SBSX",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 2
+              }
+            ]
+          },
+          {
+            "type": "HN-D",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 4
+              }
+            ]
+          },
+          {
+            "type": "RN-D",
+            "devices": [
+              {
+                "p": 3,
+                "d": 0,
+                "node_id": 6
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "node_id": 8,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 8
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 9
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 10
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 11
+              }
+            ]
+          },
+          {
+            "type": "SN-F_CHIE",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 12
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "node_id": 16,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 16
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 17
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 18
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 19
+              }
+            ]
+          },
+          {
+            "type": "SN-F_CHIE",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 20
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 0,
+        "y": 3,
+        "node_id": 24,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 24
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 25
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 26
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 27
+              }
+            ]
+          },
+          {
+            "type": "SN-F_CHIE",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 28
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 0,
+        "y": 4,
+        "node_id": 32,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 32
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 33
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 34
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 35
+              }
+            ]
+          },
+          {
+            "type": "SN-F_CHIE",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 36
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 0,
+        "y": 5,
+        "node_id": 40,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 40
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 41
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 42
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 43
+              }
+            ]
+          },
+          {
+            "type": "SN-F_CHIE",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 44
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 0,
+        "y": 6,
+        "node_id": 48,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 48
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 49
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 50
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 51
+              }
+            ]
+          },
+          {
+            "type": "SN-F_CHIE",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 52
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 0,
+        "y": 7,
+        "node_id": 56,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 56
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 57
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 58
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 59
+              }
+            ]
+          },
+          {
+            "type": "SN-F_CHIE",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 60
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 0,
+        "y": 8,
+        "node_id": 64,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 64
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 65
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 66
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 67
+              }
+            ]
+          },
+          {
+            "type": "SN-F_CHIE",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 68
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 0,
+        "y": 9,
+        "node_id": 72,
+        "ports": [
+          {
+            "type": "HN-T",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 72
+              }
+            ]
+          },
+          {
+            "type": "HN-P",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 76
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "x": 1,
+        "y": 0,
+        "node_id": 128,
+        "ports": [
+          {
+            "type": "HN-P",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 128
+              }
+            ]
+          },
+          {
+            "type": "RN-D",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 130
+              }
+            ]
+          },
+          {
+            "type": "RN-D",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 132
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "node_id": 136,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 136
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 137
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 140
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 141
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "node_id": 144,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 144
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 145
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 148
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 149
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 1,
+        "y": 3,
+        "node_id": 152,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 152
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 153
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 156
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 157
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 1,
+        "y": 4,
+        "node_id": 160,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 160
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 161
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 164
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 165
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 1,
+        "y": 5,
+        "node_id": 168,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 168
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 169
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 172
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 173
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 1,
+        "y": 6,
+        "node_id": 176,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 176
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 177
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 180
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 181
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 1,
+        "y": 7,
+        "node_id": 184,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 184
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 185
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 188
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 189
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 1,
+        "y": 8,
+        "node_id": 192,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 192
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 193
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 196
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 197
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 1,
+        "y": 9,
+        "node_id": 200,
+        "ports": [
+          {
+            "type": "RN-D",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 200
+              }
+            ]
+          },
+          {
+            "type": "RN-D",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 204
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "x": 2,
+        "y": 0,
+        "node_id": 256,
+        "ports": [
+          {
+            "type": "CCG",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 256
+              }
+            ]
+          },
+          {
+            "type": "CXRH",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 258
+              }
+            ]
+          },
+          {
+            "type": "RN-D",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 260
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "node_id": 264,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 264
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 265
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 268
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 269
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "node_id": 272,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 272
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 273
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 276
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 277
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 2,
+        "y": 3,
+        "node_id": 280,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 280
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 281
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 284
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 285
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 2,
+        "y": 4,
+        "node_id": 288,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 288
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 289
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 292
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 293
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 2,
+        "y": 5,
+        "node_id": 296,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 296
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 297
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 300
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 301
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 2,
+        "y": 6,
+        "node_id": 304,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 304
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 305
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 308
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 309
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 2,
+        "y": 7,
+        "node_id": 312,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 312
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 313
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 316
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 317
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 2,
+        "y": 8,
+        "node_id": 320,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 320
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 321
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 324
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 325
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 2,
+        "y": 9,
+        "node_id": 328,
+        "ports": [
+          {
+            "type": "CCG",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 328
+              }
+            ]
+          },
+          {
+            "type": "CXRH",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 330
+              }
+            ]
+          },
+          {
+            "type": "RN-D",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 332
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "x": 3,
+        "y": 0,
+        "node_id": 384,
+        "ports": [
+          {
+            "type": "CCG",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 384
+              }
+            ]
+          },
+          {
+            "type": "CXRH",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 386
+              }
+            ]
+          },
+          {
+            "type": "HN-P",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 388
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "node_id": 392,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 392
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 393
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 394
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 395
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 396
+              },
+              {
+                "p": 2,
+                "d": 1,
+                "node_id": 397
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 3,
+        "y": 2,
+        "node_id": 400,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 400
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 401
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 402
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 403
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 404
+              },
+              {
+                "p": 2,
+                "d": 1,
+                "node_id": 405
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 3,
+        "y": 3,
+        "node_id": 408,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 408
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 409
+              }
+            ]
+          },
+          {
+            "type": "CCG",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 412
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 3,
+        "y": 4,
+        "node_id": 416,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 416
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 417
+              }
+            ]
+          },
+          {
+            "type": "CCG",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 420
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 3,
+        "y": 5,
+        "node_id": 424,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 424
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 425
+              }
+            ]
+          },
+          {
+            "type": "CCG",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 428
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 3,
+        "y": 6,
+        "node_id": 432,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 432
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 433
+              }
+            ]
+          },
+          {
+            "type": "CCG",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 436
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 3,
+        "y": 7,
+        "node_id": 440,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 440
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 441
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 442
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 443
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 444
+              },
+              {
+                "p": 2,
+                "d": 1,
+                "node_id": 445
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 3,
+        "y": 8,
+        "node_id": 448,
+        "ports": [
+          {
+            "type": "HN-F",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 448
+              },
+              {
+                "p": 0,
+                "d": 1,
+                "node_id": 449
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 450
+              },
+              {
+                "p": 1,
+                "d": 1,
+                "node_id": 451
+              }
+            ]
+          },
+          {
+            "type": "RN-F_CHIE_ESAM",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 452
+              },
+              {
+                "p": 2,
+                "d": 1,
+                "node_id": 453
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "x": 3,
+        "y": 9,
+        "node_id": 456,
+        "ports": [
+          {
+            "type": "CCG",
+            "devices": [
+              {
+                "p": 0,
+                "d": 0,
+                "node_id": 456
+              }
+            ]
+          },
+          {
+            "type": "CXRH",
+            "devices": [
+              {
+                "p": 1,
+                "d": 0,
+                "node_id": 458
+              }
+            ]
+          },
+          {
+            "type": "HN-P",
+            "devices": [
+              {
+                "p": 2,
+                "d": 0,
+                "node_id": 460
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  ]
+}
