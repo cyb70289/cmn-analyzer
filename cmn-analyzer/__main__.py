@@ -39,9 +39,6 @@ def load_mesh_info(args):
 def generate_mesh_info(mesh, args) -> None:
     mesh_info = mesh.info()
     info_json = json.dumps(mesh_info, indent=2)
-    if args.verbose:
-        logging.debug('======= mesh information =======')
-        logging.debug(info_json)
     if args.output:
         with open(args.output, 'w') as f:
             f.write(info_json)
