@@ -102,7 +102,6 @@ class _NodeBase:
 
 
 class _NodeDN(_NodeBase): type = 'DVM'
-class _NodeDTC(_NodeBase): type = 'DTC'
 class _NodeHNI(_NodeBase): type = 'HN-I'
 class _NodeHNF(_NodeBase): type = 'HN-F'
 class _NodeSBSX(_NodeBase): type = 'SBSX'
@@ -191,6 +190,7 @@ class _NodeMXP(_NodeBase):
                     HN-F, HN-F_MPAM_S and HN-F_MPAM_NS
       * key = (port_id, device_id)
       * val = list of child nodes for this device, may be empty for SNF/RNF
+    - dtc_domain: dtc domain this MXP belongs to
     '''
     type = 'XP'
     def __init__(self, parent, node_info, reg_base:int) -> None:
@@ -201,6 +201,9 @@ class _NodeMXP(_NodeBase):
         logging.debug(f'nodeid = {self.node_id}')
         port_count = node_info.bits(48, 51)
         logging.debug(f'ports = {port_count}')
+        # dtc domain
+        self.dtc_domain = self._get_dtc_domain(reg_base)
+        logging.debug(f'dtc = {self.dtc_domain}')
         # port_devs: [('dev_type', dev_count)], dev_count may be 0
         self.port_devs = self._probe_ports(port_count, reg_base)
         # _child_nodes: [_NodeHNF(), _NodeRND(), ...], RNF/SNF not included
@@ -303,13 +306,35 @@ class _NodeMXP(_NodeBase):
             nodes.append(dev_node)
         return nodes
 
+    def _get_dtc_domain(self, reg_base:int) -> int:
+        # XXX: por_dtm_unit_info is only for port 0,1, should check
+        # por_dtm_unit_info_dt1-3 for port 2~7.
+        # BUT, why will ports under same XP belongs to different DTC?
+        por_dtm_unit_info = self._iodrv.read(reg_base + 0x960)
+        return por_dtm_unit_info.bits(0, 1)
+
+
+class _NodeDTC(_NodeBase):
+    'exported member: domain'
+    type = 'DTC'
+    def __init__(self, parent, node_info, reg_base:int) -> None:
+        super().__init__(parent, node_info, reg_base)
+        self.domain = node_info.bits(32, 33)
+
 
 class Mesh:
+    '''
+    export members:
+    - root_node: cfg rootnode
+    - dtcs[]: list of HN-D/T nodes, indexed by DTC domain
+              every XP belongs to one DTC domain (xp.dtc_domain)
+    '''
     def __init__(self, iodrv) -> None:
         self._iodrv = iodrv
         node_info = iodrv.read(0)
         assert node_info.bits(0, 15) == 0x0002  # CFG
         self.root_node = _NodeCFG(self, node_info)
+        self.dtcs = self._build_dtc_list(self.root_node)
 
     def info(self):
         '''
@@ -365,3 +390,19 @@ class Mesh:
                 xp_list[x].append(xp_info)
         mesh_info['xp'] = xp_list
         return mesh_info
+
+    def _build_dtc_list(self, root_node) -> List[_NodeDTC]:
+        dtcs = []
+        max_dtc_domain = -1
+        # find all nodes with type = DTC
+        for xp_row in root_node.xps:
+            for xp in xp_row:
+                max_dtc_domain = max(max_dtc_domain, xp.dtc_domain)
+                for _, nodes in xp.child_nodes.items():
+                    for node in nodes:
+                        if node.type == 'DTC':
+                            dtcs.append(node)
+        assert(max_dtc_domain+1 == len(dtcs))
+        # sort by dtc domain
+        dtcs.sort(key=lambda dtc: dtc.domain)
+        return dtcs
