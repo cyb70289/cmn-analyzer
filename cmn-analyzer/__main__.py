@@ -29,7 +29,7 @@ def parse_args():
         help='save mesh info to a JSON file')
     group.add_argument('-i', '--input', type=str, metavar='file',
         help='read mesh info from JSON file')
-    # args common for "stat" and "trace"
+    # args for both "stat" and "trace"
     stat_trace_parser = argparse.ArgumentParser(add_help=False)
     stat_trace_parser.add_argument('-e', '--event', type=str, metavar='event',
         action='append', help='watchpoint or device event')
