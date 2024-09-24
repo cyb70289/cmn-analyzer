@@ -6,17 +6,34 @@ import struct
 from typing import Tuple
 
 
-class _cmn_register:
-    def __init__(self, reg_val:int) -> None:
-        self._reg_val = reg_val
+class _CmnRegister:
+    def __init__(self, value:int) -> None:
+        self._value = value
 
-    # extract bits at position `start` to `end`, inclusive
-    def bits(self, start:int, end:int) -> int:
-        assert end >= start
-        reg_val = self._reg_val >> start
+    @property
+    def value(self) -> int:
+        return self._value
+
+    # get bits in [start, end], *inclusive*
+    def __getitem__(self, bit_range:Tuple[int, int]) -> int:
+        start, end = bit_range
+        assert start <= end
+        value = self._value >> start
         bit_length = end - start + 1
         bit_mask = (1 << bit_length) - 1
-        return reg_val & bit_mask
+        return value & bit_mask
+
+    # set bits in [start, end], *inclusive*
+    def __setitem__(self, bit_range:Tuple[int, int], value:int) -> None:
+        start, end = bit_range
+        assert start <= end
+        assert value < (1 << (end-start+1))
+        if start == 0 and end == 63:
+            new_value = value
+        else:
+            mask = (1 << (start+1)) - (1 << end)
+            new_value = (self._value & ~mask) | (value << start)
+        self._value = new_value
 
 
 class CmnIodrv:
@@ -54,19 +71,11 @@ class CmnIodrv:
         base = lib.iommap(dev_file.encode('ascii'), size, readonly)
         return lib, base, size
 
-    def read(self, reg:int) -> _cmn_register:
+    def read(self, reg:int) -> _CmnRegister:
         assert reg + 8 <= self.size
         val = self.lib.ioread(self.base + reg)
-        return _cmn_register(val)
+        return _CmnRegister(val)
 
-    def write(self, reg:int, bit_range:Tuple[int, int], val:int) -> None:
-        start, end = bit_range
-        assert 0 <= start <= end <= 63
-        assert val < (1 << (end-start+1))
-        mask = (1 << (start+1)) - (1 << end)
-        if start == 0 and end == 63:
-            new_val = val
-        else:
-            original_val = self.lib.ioread(self.base + reg)
-            new_val = (original_val & ~mask) | (val << start)
-        self.lib.iowrite(self.base + reg, new_val)
+    def write(self, reg:int, value:int) -> None:
+        assert reg + 8 <= self.size
+        self.lib.iowrite(self.base + reg, value)

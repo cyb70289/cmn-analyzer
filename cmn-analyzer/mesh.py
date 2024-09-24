@@ -83,13 +83,13 @@ class _NodeBase:
         self._iodrv = parent._iodrv
         self._reg_base = reg_base
         # por_xxx_node_info
-        self.node_id = node_info.bits(16, 31)
+        self.node_id = node_info[16, 31]
         assert self.node_id < 4096
-        self.logical_id = node_info.bits(32, 47)
+        self.logical_id = node_info[32, 47]
         # por_xxx_child_info
         child_info = self._iodrv.read(reg_base + 0x80)
-        self._child_count = child_info.bits(0, 15)
-        self._child_ptr_offset = child_info.bits(16, 31)
+        self._child_count = child_info[0, 15]
+        self._child_ptr_offset = child_info[16, 31]
 
     # extract port/device no from node_id, not used by CFG and MXP
     def update_port_device_no(self, port_count) -> None:
@@ -138,13 +138,13 @@ class _NodeCFG(_NodeBase):
         for i in range(self._child_count):
             child_ptr_offset = self._child_ptr_offset + i*8
             child_ptr = self._iodrv.read(child_ptr_offset)
-            xp_node_offset = child_ptr.bits(0, 29)
-            is_external = child_ptr.bits(31, 31)
+            xp_node_offset = child_ptr[0, 29]
+            is_external = child_ptr[31, 31]
             if is_external:
                 logger.warning('ignore external node from root')
                 continue
             xp_node_info = self._iodrv.read(xp_node_offset)
-            assert xp_node_info.bits(0, 15) == 0x0006  # XP
+            assert xp_node_info[0, 15] == 0x0006  # XP
             xp_list.append(_NodeMXP(self, xp_node_info, xp_node_offset))
         return xp_list
 
@@ -199,7 +199,7 @@ class _NodeMXP(_NodeBase):
         # least 3 bits (port, device) of XP node id must be 0
         assert (self.node_id & 7) == 0
         logging.debug(f'nodeid = {self.node_id}')
-        port_count = node_info.bits(48, 51)
+        port_count = node_info[48, 51]
         logging.debug(f'ports = {port_count}')
         # dtc domain
         self.dtc_domain = self._get_dtc_domain(reg_base)
@@ -272,10 +272,10 @@ class _NodeMXP(_NodeBase):
             # por_mxp_device_port_connect_info_p0-5
             port_conn_info = self._iodrv.read(reg_base + 8 + i*8)
             # fail loud if device type not suported
-            dev_type = _device_type[port_conn_info.bits(0, 4)]
+            dev_type = _device_type[port_conn_info[0, 4]]
             # por_mxp_p0-5_info
             port_info = self._iodrv.read(reg_base + 0x900 + i*16)
-            dev_count = port_info.bits(0, 2)
+            dev_count = port_info[0, 2]
             port_devs.append((dev_type, dev_count))
             if dev_count > 0:
                 # strip extensions for log output: RN-F_CHID_ESAM -> RN-F
@@ -289,13 +289,13 @@ class _NodeMXP(_NodeBase):
         for i in range(self._child_count):
             child_ptr_off = reg_base + self._child_ptr_offset + i*8
             child_ptr = self._iodrv.read(child_ptr_off)
-            dev_node_offset = child_ptr.bits(0, 29)
-            is_external = child_ptr.bits(31, 31)
+            dev_node_offset = child_ptr[0, 29]
+            is_external = child_ptr[31, 31]
             if is_external:
                 logger.warning(f'XP{self.node_id}:ignore external node')
                 continue
             dev_node_info = self._iodrv.read(dev_node_offset)
-            dev_node_type = dev_node_info.bits(0, 15)
+            dev_node_type = dev_node_info[0, 15]
             if dev_node_type not in _node_type:
                 logger.warning(f'XP{self.node_id}:ignore unknown node type '
                                f'0x{dev_node_type:04X}')
@@ -311,7 +311,7 @@ class _NodeMXP(_NodeBase):
         # por_dtm_unit_info_dt1-3 for port 2~7.
         # BUT, why will ports under same XP belongs to different DTC?
         por_dtm_unit_info = self._iodrv.read(reg_base + 0x960)
-        return por_dtm_unit_info.bits(0, 1)
+        return por_dtm_unit_info[0, 1]
 
 
 class _NodeDTC(_NodeBase):
@@ -319,7 +319,7 @@ class _NodeDTC(_NodeBase):
     type = 'DTC'
     def __init__(self, parent, node_info, reg_base:int) -> None:
         super().__init__(parent, node_info, reg_base)
-        self.domain = node_info.bits(32, 33)
+        self.domain = node_info[32, 33]
 
 
 class Mesh:
@@ -332,7 +332,7 @@ class Mesh:
     def __init__(self, iodrv) -> None:
         self._iodrv = iodrv
         node_info = iodrv.read(0)
-        assert node_info.bits(0, 15) == 0x0002  # CFG
+        assert node_info[0, 15] == 0x0002  # CFG
         self.root_node = _NodeCFG(self, node_info)
         self.dtcs = self._build_dtc_list(self.root_node)
 
