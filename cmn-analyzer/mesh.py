@@ -3,29 +3,31 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Tuple
 
+from iodrv import CmnRegister
+
 
 logger = logging.getLogger(__name__)
 
 # por_xxx_node_info
 _node_type = {
-    0x0001: '_NodeDN',          # DVM
-    0x0002: '_NodeCFG',         # CFG
-    0x0003: '_NodeDTC',         # DTC
-    0x0004: '_NodeHNI',         # HN-I
-    0x0005: '_NodeHNF',         # HN-F
-    0x0006: '_NodeMXP',         # XP
-    0x0007: '_NodeSBSX',        # SBSX
-    0x0008: '_NodeHNF_MPAM_S',  # HN-F_MPAM_S
-    0x0009: '_NodeHNF_MPAM_NS', # HN-F_MPAN_NS
-    0x000A: '_NodeRNI',         # RN-I
-    0x000D: '_NodeRND',         # RN-D
-    0x000F: '_NodeRN_SAM',      # RN-SAM
-    0x0011: '_NodeHN_P',        # HN-P (no document)
-    0x0103: '_NodeCCG_RA',      # CCG_RA
-    0x0104: '_NodeCCG_HA',      # CCG_HA
-    0x0105: '_NodeCCLA',        # CCLA
-    0x0106: '_NodeCCLA_RNI',    # CCLA_RNI (no document)
-    0x1000: '_NodeAPB',         # APB
+    0x0001: 'NodeDN',           # DVM
+    0x0002: 'NodeCFG',          # CFG
+    0x0003: 'NodeDTC',          # DTC
+    0x0004: 'NodeHNI',          # HN-I
+    0x0005: 'NodeHNF',          # HN-F
+    0x0006: 'NodeMXP',          # XP
+    0x0007: 'NodeSBSX',         # SBSX
+    0x0008: 'NodeHNF_MPAM_S',   # HN-F_MPAM_S
+    0x0009: 'NodeHNF_MPAM_NS',  # HN-F_MPAN_NS
+    0x000A: 'NodeRNI',          # RN-I
+    0x000D: 'NodeRND',          # RN-D
+    0x000F: 'NodeRN_SAM',       # RN-SAM
+    0x0011: 'NodeHN_P',         # HN-P (no document)
+    0x0103: 'NodeCCG_RA',       # CCG_RA
+    0x0104: 'NodeCCG_HA',       # CCG_HA
+    0x0105: 'NodeCCLA',         # CCLA
+    0x0106: 'NodeCCLA_RNI',     # CCLA_RNI (no document)
+    0x1000: 'NodeAPB',          # APB
 }
 
 # por_mxp_device_port_connect_info_p0-5
@@ -87,7 +89,7 @@ class _NodeBase:
         assert self.node_id < 4096
         self.logical_id = node_info[32, 47]
         # por_xxx_child_info
-        child_info = self._iodrv.read(reg_base + 0x80)
+        child_info = self.read_off(0x80)
         self._child_count = child_info[0, 15]
         self._child_ptr_offset = child_info[16, 31]
 
@@ -100,55 +102,65 @@ class _NodeBase:
             p, d = pd >> 1, pd & 1
         self.p, self.d = p, d
 
+    # read at node offset
+    def read_off(self, reg:int) -> CmnRegister:
+        return self._iodrv.read(self._reg_base + reg)
 
-class _NodeDN(_NodeBase): type = 'DVM'
-class _NodeHNI(_NodeBase): type = 'HN-I'
-class _NodeHNF(_NodeBase): type = 'HN-F'
-class _NodeSBSX(_NodeBase): type = 'SBSX'
-class _NodeHNF_MPAM_S(_NodeBase): type = 'HN-F_MPAM_S'
-class _NodeHNF_MPAM_NS(_NodeBase): type = 'HN-F_MPAN_NS'
-class _NodeRNI(_NodeBase): type = 'RN-I'
-class _NodeRND(_NodeBase): type = 'RN-D'
-class _NodeRN_SAM(_NodeBase): type = 'RN-SAM'
-class _NodeHN_P(_NodeBase): type = 'HN-P'
-class _NodeCCG_RA(_NodeBase): type = 'CCG_RA'
-class _NodeCCG_HA(_NodeBase): type = 'CCG_HA'
-class _NodeCCLA(_NodeBase): type = 'CCLA'
-class _NodeCCLA_RNI(_NodeBase): type = 'CCLA_RNI'
-class _NodeAPB(_NodeBase): type = 'APB'
+    # write at node offset
+    def write_off(self, reg:int, value:int) -> None:
+        self._iodrv.write(self._reg_base + reg, value)
 
 
-class _NodeCFG(_NodeBase):
+class NodeDN(_NodeBase): type = 'DVM'
+class NodeHNI(_NodeBase): type = 'HN-I'
+class NodeHNF(_NodeBase): type = 'HN-F'
+class NodeSBSX(_NodeBase): type = 'SBSX'
+class NodeHNF_MPAM_S(_NodeBase): type = 'HN-F_MPAM_S'
+class NodeHNF_MPAM_NS(_NodeBase): type = 'HN-F_MPAN_NS'
+class NodeRNI(_NodeBase): type = 'RN-I'
+class NodeRND(_NodeBase): type = 'RN-D'
+class NodeRN_SAM(_NodeBase): type = 'RN-SAM'
+class NodeHN_P(_NodeBase): type = 'HN-P'
+class NodeCCG_RA(_NodeBase): type = 'CCG_RA'
+class NodeCCG_HA(_NodeBase): type = 'CCG_HA'
+class NodeCCLA(_NodeBase): type = 'CCLA'
+class NodeCCLA_RNI(_NodeBase): type = 'CCLA_RNI'
+class NodeAPB(_NodeBase): type = 'APB'
+
+
+class NodeCFG(_NodeBase):
     '''
     exported members:
     - xps[x][y]: 2D array saves all cross points in mesh
       * xdim = len(xps)
       * ydim = len(xps[0])
-      * xps[i][j] -> _NodeMXP at mesh coordinate (i, j)
+      * xps[i][j] -> NodeMXP at mesh coordinate (i, j)
+      * is_multi_dtm -> multiple dtm in xp with more than 2 ports
     '''
     type = 'CFG'
     def __init__(self, parent, node_info) -> None:
         super().__init__(parent, node_info, reg_base=0)
         xp_list = self._probe_xp()
         self.xps = self._xp_list_to_array(xp_list)
+        self.multi_dtm_enabled = self._multi_dtm_enabled()
 
-    def _probe_xp(self) -> List[_NodeMXP]:
+    def _probe_xp(self) -> List[NodeMXP]:
         xp_list = []
         logging.debug(f'found {self._child_count} cross points')
         for i in range(self._child_count):
             child_ptr_offset = self._child_ptr_offset + i*8
-            child_ptr = self._iodrv.read(child_ptr_offset)
+            child_ptr = self.read_off(child_ptr_offset)
             xp_node_offset = child_ptr[0, 29]
-            is_external = child_ptr[31, 31]
+            is_external = child_ptr[31]
             if is_external:
                 logger.warning('ignore external node from root')
                 continue
-            xp_node_info = self._iodrv.read(xp_node_offset)
+            xp_node_info = self.read_off(xp_node_offset)
             assert xp_node_info[0, 15] == 0x0006  # XP
-            xp_list.append(_NodeMXP(self, xp_node_info, xp_node_offset))
+            xp_list.append(NodeMXP(self, xp_node_info, xp_node_offset))
         return xp_list
 
-    def _xp_list_to_array(self, xp_list) -> List[List[_NodeMXP]]:
+    def _xp_list_to_array(self, xp_list) -> List[List[NodeMXP]]:
         def _get_mesh_dimension() -> Tuple[int, int]:
             # XXX: dirty knowledge from linux arm-cmn driver
             # - x-dim = xp.logical_id if xp.node_id == 8
@@ -173,8 +185,14 @@ class _NodeCFG(_NodeBase):
             xps[xp.x][xp.y] = xp
         return xps   # type: ignore
 
+    def _multi_dtm_enabled(self) -> bool:
+        multi_dtm_enabled = self.read_off(0x900)[63]
+        if multi_dtm_enabled:
+            logging.warning('detected multiple dtm, unsupported')
+        return multi_dtm_enabled != 0
 
-class _NodeMXP(_NodeBase):
+
+class NodeMXP(_NodeBase):
     '''
     exported members:
     - port_devs[]: type and number of devices connected to all ports
@@ -202,12 +220,12 @@ class _NodeMXP(_NodeBase):
         port_count = node_info[48, 51]
         logging.debug(f'ports = {port_count}')
         # dtc domain
-        self.dtc_domain = self._get_dtc_domain(reg_base)
+        self.dtc_domain = self._get_dtc_domain()
         logging.debug(f'dtc = {self.dtc_domain}')
         # port_devs: [('dev_type', dev_count)], dev_count may be 0
-        self.port_devs = self._probe_ports(port_count, reg_base)
+        self.port_devs = self._probe_ports(port_count)
         # _child_nodes: [_NodeHNF(), _NodeRND(), ...], RNF/SNF not included
-        self._child_nodes = self._probe_devices(reg_base)
+        self._child_nodes = self._probe_devices()
         logging.debug('---------------------------')
 
     def get_dev_node_id(self, p:int, d:int) -> int:
@@ -232,6 +250,23 @@ class _NodeMXP(_NodeBase):
         # child_nodes: {(port_id, dev_id): [nodes]}
         self.child_nodes = self._populate_child_nodes()
         logging.debug('~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+
+    def reset(self) -> None:
+        # clear registers
+        zero_regs = (
+            0x2100,                                  # por_dtm_control(stop dt)
+            0x2210,                                  # por_dtm_pmu_config
+            0x2000,                                  # por_mxp_pmu_event_sel
+            0x21A0, 0x21A0+24, 0x21A0+48, 0x21A0+72, # por_dtm_wp0-3_config
+            0x21A8, 0x21A8+24, 0x21A8+48, 0x21A8+72, # por_dtm_wp0-3_val
+            0x21B0, 0x21B0+24, 0x21B0+48, 0x21B0+72, # por_dtm_wp0-3_mask
+            0x2220,                                  # por_dtm_pmevcnt
+            0x2240,                                  # por_dtm_pmevcntsr
+        )
+        for reg in zero_regs:
+            self.write_off(reg, 0)
+        # clear por_dtm_fifo_entry_ready
+        self.write_off(0x2118, 0b1111)
 
     # calculate x,y of all cross points and p,d for all child nodes
     def _update_xypd(self, xdim:int, ydim:int) -> Tuple[int, int]:
@@ -263,18 +298,18 @@ class _NodeMXP(_NodeBase):
             child_nodes[(node.p, node.d)].append(node)
         return child_nodes
 
-    def _probe_ports(self, port_count:int, reg_base:int) \
+    def _probe_ports(self, port_count:int) \
         -> List[Tuple[str, int]]:
         # XXX: shall we scan all the 6 port? it depends on whether there will
         #      be "holes"? e.g., port0 and port2 has device, but not port1
         port_devs = []
         for i in range(port_count):
             # por_mxp_device_port_connect_info_p0-5
-            port_conn_info = self._iodrv.read(reg_base + 8 + i*8)
+            port_conn_info = self.read_off(8 + i*8)
             # fail loud if device type not suported
             dev_type = _device_type[port_conn_info[0, 4]]
             # por_mxp_p0-5_info
-            port_info = self._iodrv.read(reg_base + 0x900 + i*16)
+            port_info = self.read_off(0x900 + i*16)
             dev_count = port_info[0, 2]
             port_devs.append((dev_type, dev_count))
             if dev_count > 0:
@@ -283,14 +318,13 @@ class _NodeMXP(_NodeBase):
                 logging.debug(f'p{i}: {dev_type}, {dev_count}')
         return port_devs
 
-    def _probe_devices(self, reg_base:int) -> List[_NodeBase]:
+    def _probe_devices(self) -> List[_NodeBase]:
         logging.debug(f'childs = {self._child_count}')
         nodes = []
         for i in range(self._child_count):
-            child_ptr_off = reg_base + self._child_ptr_offset + i*8
-            child_ptr = self._iodrv.read(child_ptr_off)
+            child_ptr = self.read_off(self._child_ptr_offset + i*8)
             dev_node_offset = child_ptr[0, 29]
-            is_external = child_ptr[31, 31]
+            is_external = child_ptr[31]
             if is_external:
                 logger.warning(f'XP{self.node_id}:ignore external node')
                 continue
@@ -306,26 +340,43 @@ class _NodeMXP(_NodeBase):
             nodes.append(dev_node)
         return nodes
 
-    def _get_dtc_domain(self, reg_base:int) -> int:
+    def _get_dtc_domain(self) -> int:
         # XXX: por_dtm_unit_info is only for port 0,1, should check
         # por_dtm_unit_info_dt1-3 for port 2~7.
         # BUT, why will ports under same XP belongs to different DTC?
-        por_dtm_unit_info = self._iodrv.read(reg_base + 0x960)
+        por_dtm_unit_info = self.read_off(0x960)
         return por_dtm_unit_info[0, 1]
 
 
-class _NodeDTC(_NodeBase):
+class NodeDTC(_NodeBase):
     'exported member: domain'
     type = 'DTC'
     def __init__(self, parent, node_info, reg_base:int) -> None:
         super().__init__(parent, node_info, reg_base)
         self.domain = node_info[32, 33]
 
+    def reset(self) -> None:
+        # clear registers
+        zero_regs = (
+            0x0A00,                         # por_dt_dtc_ctl (stop dt)
+            0x2100,                         # por_dt_pmcr    (stop pmu)
+            0x0A30,                         # por_dt_trace_control
+            0x2000, 0x2010, 0x2020, 0x2030, # por_dt_pmevcntAB-GH
+            0x2040,                         # por_dt_pmccntr
+            0x2050, 0x2060, 0x2070, 0x2080, # por_dt_pmevcntsrAB-GH
+            0x2090,                         # por_dt_pmccntrsr
+        )
+        for reg in zero_regs:
+            self.write_off(reg, 0)
+        # set por_dt_pmovsr_clr[8:0] to clear counter overflow status
+        self.write_off(0x2210, 0b1_1111_1111)
+
 
 class Mesh:
     '''
     export members:
     - root_node: cfg rootnode
+    - xps{nid:xp}: maps nodeid to NodeMXP
     - dtcs[]: list of HN-D/T nodes, indexed by DTC domain
               every XP belongs to one DTC domain (xp.dtc_domain)
     '''
@@ -333,7 +384,8 @@ class Mesh:
         self._iodrv = iodrv
         node_info = iodrv.read(0)
         assert node_info[0, 15] == 0x0002  # CFG
-        self.root_node = _NodeCFG(self, node_info)
+        self.root_node = NodeCFG(self, node_info)
+        self.xps = self._build_xp_dict(self.root_node)
         self.dtcs = self._build_dtc_list(self.root_node)
 
     def info(self):
@@ -391,12 +443,19 @@ class Mesh:
         mesh_info['xp'] = xp_list
         return mesh_info
 
-    def _build_dtc_list(self, root_node) -> List[_NodeDTC]:
+    def _build_xp_dict(self, root_node) -> Dict[int, NodeMXP]:
+        xps = {}
+        for xp_col in root_node.xps:
+            for xp in xp_col:
+                xps[xp.node_id] = xp
+        return xps
+
+    def _build_dtc_list(self, root_node) -> List[NodeDTC]:
         dtcs = []
         max_dtc_domain = -1
         # find all nodes with type = DTC
-        for xp_row in root_node.xps:
-            for xp in xp_row:
+        for xp_col in root_node.xps:
+            for xp in xp_col:
                 max_dtc_domain = max(max_dtc_domain, xp.dtc_domain)
                 for _, nodes in xp.child_nodes.items():
                     for node in nodes:

@@ -2,11 +2,10 @@ import ctypes
 import glob
 import mmap
 import os
-import struct
-from typing import Tuple
+from typing import Tuple, Union
 
 
-class _CmnRegister:
+class CmnRegister:
     def __init__(self, value:int) -> None:
         self._value = value
 
@@ -15,8 +14,11 @@ class _CmnRegister:
         return self._value
 
     # get bits in [start, end], *inclusive*
-    def __getitem__(self, bit_range:Tuple[int, int]) -> int:
-        start, end = bit_range
+    def __getitem__(self, bit_range:Union[Tuple[int, int], int]) -> int:
+        if isinstance(bit_range, int):
+            start, end = bit_range, bit_range
+        else:
+            start, end = bit_range
         assert start <= end
         value = self._value >> start
         bit_length = end - start + 1
@@ -24,14 +26,18 @@ class _CmnRegister:
         return value & bit_mask
 
     # set bits in [start, end], *inclusive*
-    def __setitem__(self, bit_range:Tuple[int, int], value:int) -> None:
-        start, end = bit_range
+    def __setitem__(self, bit_range:Union[Tuple[int, int], int],
+                    value:int) -> None:
+        if isinstance(bit_range, int):
+            start, end = bit_range, bit_range
+        else:
+            start, end = bit_range
         assert start <= end
         assert value < (1 << (end-start+1))
         if start == 0 and end == 63:
             new_value = value
         else:
-            mask = (1 << (start+1)) - (1 << end)
+            mask = (1 << (end+1)) - (1 << start)
             new_value = (self._value & ~mask) | (value << start)
         self._value = new_value
 
@@ -71,10 +77,10 @@ class CmnIodrv:
         base = lib.iommap(dev_file.encode('ascii'), size, readonly)
         return lib, base, size
 
-    def read(self, reg:int) -> _CmnRegister:
+    def read(self, reg:int) -> CmnRegister:
         assert reg + 8 <= self.size
         val = self.lib.ioread(self.base + reg)
-        return _CmnRegister(val)
+        return CmnRegister(val)
 
     def write(self, reg:int, value:int) -> None:
         assert reg + 8 <= self.size

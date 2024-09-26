@@ -6,6 +6,7 @@ from pprint import pprint
 
 from iodrv import CmnIodrv
 from mesh import Mesh
+from pmu import profile
 
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,6 @@ logger = logging.getLogger(__name__)
 def parse_args():
     parser = argparse.ArgumentParser(description='CMN Analyzer')
     subparsers = parser.add_subparsers(dest='cmd', required=True)
-
     # common args
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument('-v', '--verbose', action='store_true',
@@ -32,7 +32,9 @@ def parse_args():
     # args for both "stat" and "trace"
     stat_trace_parser = argparse.ArgumentParser(add_help=False)
     stat_trace_parser.add_argument('-e', '--event', type=str, metavar='event',
-        action='append', help='watchpoint or device event')
+        action='append', required=True, help='watchpoint or device event')
+    stat_trace_parser.add_argument('-I', '--interval', type=int, default=1000,
+        metavar='ms', help='print internval in msecs')
     stat_parser = subparsers.add_parser('stat', help='count events',
         parents=[common_parser, stat_trace_parser])
     trace_parser = subparsers.add_parser('trace', help='trace events',
@@ -41,7 +43,6 @@ def parse_args():
     # stat_parser.add_argument('--arg-stat')
     # args only for "trace"
     # trace_parser.add_argument('--arg-trace')
-
     args = parser.parse_args()
     return args
 
@@ -79,7 +80,7 @@ def main():
             logging.info(f'CMN mesh{args.mesh} probed')
             mesh_info = generate_mesh_info(mesh, args)
     elif args.cmd == 'stat' or args.cmd == 'trace':
-        pass
+        profile(args)
 
 
 if __name__ == "__main__":
