@@ -31,7 +31,6 @@ class _Event:
         self._parse_event_str(event_str.lower())
         self._verify_args()
         self.wp_val, self.wp_mask = self._get_wp_val_mask()
-        self.name = event_str
 
     # save pmu info for profiling
     def save_pmu_info(self, dtm, wp_index:int, dtc_counter_index:int) -> None:
@@ -95,7 +94,17 @@ class _Event:
         self.channel, self.direction, self.group = channel, direction, group
         self.matches = matches
         self.chn_sel = {'req':0, 'rsp':1, 'snp':2, 'dat':3}[channel]
- 
+        # construct event name: cmn0-xp100-port1-up-grp0-req-opcode-lpid0-...
+        self.name = f'cmn{mesh}-xp{xp_nid}-port{port}-{direction}' \
+                    f'-grp{group}-{channel}-'
+        if 'opcode' in self.matches:
+            self.name += self.matches['opcode']
+        else:
+            self.name += 'all'
+        for k, v in self.matches.items():
+            if k != 'opcode':
+                self.name += f'-{k}{v}'  # v must be a number
+
     def _get_wp_val_mask(self) -> Tuple[int, int]:
         value, mask = \
                 flit.get_wp_val_mask(self.channel, self.group, self.matches)

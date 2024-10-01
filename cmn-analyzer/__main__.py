@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import sys
+from argparse import RawTextHelpFormatter
 from pprint import pprint
 
 from iodrv import CmnIodrv
@@ -18,31 +19,44 @@ def parse_args():
     # common args
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument('-v', '--verbose', action='store_true',
-        help='enable verbose logging')
+                               help='enable verbose logging')
     # args only for "info"
     info_parser = subparsers.add_parser('info', help='dump mesh info',
-        parents=[common_parser])
+                                        parents=[common_parser])
     info_parser.add_argument('-m', '--mesh', type=int, default=0,
-        metavar='num', help='CMN mesh id')
+                             metavar='num', help='CMN mesh id')
     group = info_parser.add_mutually_exclusive_group()
     group.add_argument('-o', '--output', type=str, metavar='file',
-        help='save mesh info to a JSON file')
+                       help='save mesh info to a JSON file')
     group.add_argument('-i', '--input', type=str, metavar='file',
-        help='read mesh info from JSON file')
+                       help='read mesh info from JSON file')
     # args for both "stat" and "trace"
-    stat_trace_parser = argparse.ArgumentParser(add_help=False)
+    stat_trace_parser = \
+        argparse.ArgumentParser(add_help=False)
+    event_help = (
+        'watchpoint events: -e event1,event2 -e event3 ...\n'
+        'examples:\n'
+        '-e cmn0/xp=8,port=1,up,group=0,channel=req/\n'
+        '-e cmn1/xp=0,port=0,down,group=1,channel=dat,opcode=compdata/\n'
+        '-e cmn0/xp=8,port=1,up,group=0,channel=rsp,tgtid=100/\n'
+        '-e cmn0/xp=8,port=1,up,channel=req/,cmn1/xp=0,port=0,down,channel=dat/'
+    )
     stat_trace_parser.add_argument('-e', '--event', type=str, metavar='event',
-        action='append', required=True, help='watchpoint or device event')
+                                   action='append', required=True,
+                                   help=event_help)
     stat_trace_parser.add_argument('-I', '--interval', type=int, default=1000,
-        metavar='ms', help='print internval in msecs')
-    stat_parser = subparsers.add_parser('stat', help='count events',
-        parents=[common_parser, stat_trace_parser])
-    trace_parser = subparsers.add_parser('trace', help='trace events',
-        parents=[common_parser, stat_trace_parser])
-    # args only for "stat"
-    # stat_parser.add_argument('--arg-stat')
+                                   metavar='ms', help='print interval')
+    stat_parser = \
+        subparsers.add_parser('stat', help='count events',
+                              parents=[common_parser, stat_trace_parser],
+                              formatter_class=RawTextHelpFormatter)
+    trace_parser = \
+        subparsers.add_parser('trace', help='trace events',
+                              parents=[common_parser, stat_trace_parser],
+                              formatter_class=RawTextHelpFormatter)
     # args only for "trace"
-    # trace_parser.add_argument('--arg-trace')
+    trace_parser.add_argument('--tracetag', action='store_true',
+                              help='enable tracetag, triggered by first event')
     args = parser.parse_args()
     return args
 
