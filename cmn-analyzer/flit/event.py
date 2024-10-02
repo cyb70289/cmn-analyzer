@@ -68,7 +68,7 @@ def _get_value_mask(channel:str, group:int, field:str, value:int) \
 # calculate wp_val, wp_mask per event
 def get_wp_val_mask(channel:str, group:int, matches:Dict[str,Any]) \
         -> Tuple[int,int]:
-    value, mask = 0, 0
+    _value, _mask = 0, 0
     for field, value in matches.items():
         if field == 'opcode':
             value = _get_opcode(channel, value)
@@ -77,8 +77,8 @@ def get_wp_val_mask(channel:str, group:int, matches:Dict[str,Any]) \
                 value = int(value, 0)
             except ValueError:
                 raise Exception(f'invalid value: {field}={value}')
-        _value, _mask = _get_value_mask(channel, group, field, value)
+        value, mask = _get_value_mask(channel, group, field, value)
         assert (mask & _mask) == 0
-        value |= _value
-        mask |= _mask
-    return value, ~mask
+        _value |= value
+        _mask |= mask
+    return _value, ~_mask

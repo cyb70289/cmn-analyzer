@@ -7,6 +7,7 @@ from typing import Any, Dict, Generator, List, Tuple
 import flit.event as flit
 from iodrv import CmnIodrv
 from mesh import Mesh, NodeCFG, NodeMXP, NodeDTC
+from trace import Packet
 
 
 logger = logging.getLogger(__name__)
@@ -25,12 +26,15 @@ class _Event:
     - matches      dict(str,str)
     - wp_val_mask  (int,int)
     - name         str
+    - pmu_info     (dtm, dtm_wp_index, dtc_counter_index)
+    - packets      [trace packet]
     '''
     def __init__(self, event_str:str) -> None:
         logging.info(f'parse event "{event_str}"')
         self._parse_event_str(event_str.lower())
         self._verify_args()
-        self.wp_val, self.wp_mask = self._get_wp_val_mask()
+        self.wp_val_mask = self._get_wp_val_mask()
+        self.packets:List[Packet] = []
 
     # save pmu info for profiling
     def save_pmu_info(self, dtm, wp_index:int, dtc_counter_index:int) -> None:
@@ -131,26 +135,31 @@ class _DTC:
         self.active_counters += 1
         return free_counter_index
 
-    def configure(self) -> None:
-        # set por_dt_pmcr.cntr_rst to clear counter on snapshot
-        por_dt_pmcr = self.dtc_node.read_off(0x2100)
-        por_dt_pmcr[5] = 1
-        self.dtc_node.write_off(0x2100, por_dt_pmcr.value)
-        # TODO: trace (por_dt_trace_control.cc_enable)
+    def configure(self, cmd:str) -> None:
+        # clear counter on snapshot
+        if cmd == 'stat':
+            por_dt_pmcr = self.dtc_node.read_off(0x2100)
+            por_dt_pmcr[5] = 1  # cntr_rst
+            self.dtc_node.write_off(0x2100, por_dt_pmcr.value)
+        # enable cycle count in trace packet
+        elif cmd == 'trace':
+            por_dt_trace_control = self.dtc_node.read_off(0x0A30)
+            por_dt_trace_control[8] = 1  # cc_enable
+            self.dtc_node.write_off(0x0A30, por_dt_trace_control.value)
 
     # enable settings only available in domain0
-    def enable0(self) -> None:
+    def enable0(self, cmd:str) -> None:
         assert self.dtc_node.domain == 0
-        # 4.4.9.1 setup PMU counters
-        # set por_dt_pmcr.pmu_en
-        por_dt_pmcr = self.dtc_node.read_off(0x2100)
-        if por_dt_pmcr[0] == 0:
-            por_dt_pmcr[0] = 1
-            self.dtc_node.write_off(0x2100, por_dt_pmcr.value)
-        # set por_dt_dtc_ctl.dt_en
+        # enable pmu
+        if cmd == 'stat':
+            por_dt_pmcr = self.dtc_node.read_off(0x2100)
+            if por_dt_pmcr[0] == 0:
+                por_dt_pmcr[0] = 1  # pmu_en
+                self.dtc_node.write_off(0x2100, por_dt_pmcr.value)
+        # enable dtc
         por_dt_dtc_ctl = self.dtc_node.read_off(0xA00)
         if por_dt_dtc_ctl[0] == 0:
-            por_dt_dtc_ctl[0] = 1
+            por_dt_dtc_ctl[0] = 1  # dt_en
             self.dtc_node.write_off(0x0A00, por_dt_dtc_ctl.value)
 
 
@@ -166,7 +175,7 @@ class _DTM:
         self.dtc0 = dtc0
         self.wp_in_use = [False]*4
 
-    def configure(self, event:_Event) -> None:
+    def configure(self, event:_Event, cmd:str) -> None:
         # get free wachpoint, 0,1:upload, 2,3:download
         wp_index = 0 if event.direction == 'up' else 2
         if self.wp_in_use[wp_index]:
@@ -174,55 +183,76 @@ class _DTM:
         if self.wp_in_use[wp_index]:
             raise Exception('no watchpoint available')
         self.wp_in_use[wp_index] = True
-        # 4.4.8.1 program DTM watchpoint
-        # - program por_dtm_wp0-3_val, por_dtm_wp0-3_mask
-        self.xp_node.write_off(0x21A8+24*wp_index, event.wp_val)
-        self.xp_node.write_off(0x21B0+24*wp_index, event.wp_mask)
-        # - program por_dtm_wp0-3_config
+        # program por_dtm_wp0-3_val, por_dtm_wp0-3_mask
+        wp_val, wp_mask = event.wp_val_mask
+        self.xp_node.write_off(0x21A8+24*wp_index, wp_val)
+        self.xp_node.write_off(0x21B0+24*wp_index, wp_mask)
+        # program por_dtm_wp0-3_config
         por_dtm_wp_config = self.xp_node.read_off(0x21A0+24*wp_index)
         assert event.port < len(self.xp_node.port_devs)
         por_dtm_wp_config[1, 3] = event.chn_sel     # wp_chn_sel
         por_dtm_wp_config[0] = event.port & 1       # wp_dev_sel
         por_dtm_wp_config[17, 18] = event.port >> 1 # wp_dev_sel2
         por_dtm_wp_config[4, 5] = event.group       # wp_grp
-        # TODO: trace (wp_pkt_type, wp_pkg_gen, wp_cc_en)
+        if cmd == 'trace':
+            # trace control flit with cycle count
+            por_dtm_wp_config[10] = 1               # wp_pkt_gen
+            por_dtm_wp_config[11, 13] = 0b100       # wp_pkt_type
+            por_dtm_wp_config[14] = 1               # wp_cc_en
         self.xp_node.write_off(0x21A0+24*wp_index, por_dtm_wp_config.value)
-        # 4.4.9.1 setup PMU counters (por_dtm_pmu_config)
-        por_dtm_pmu_config = self.xp_node.read_off(0x2210)
-        # - set watchpoint as PMU counter input
-        pmevcnt_input_sel_bitrange = (32+wp_index*8, 39+wp_index*8)
-        por_dtm_pmu_config[pmevcnt_input_sel_bitrange] = wp_index
-        # - pair 16bit DTM counter with 32bit DTC counter to get 48bit counter
-        pmevcnt_paired = por_dtm_pmu_config[4, 7]
-        por_dtm_pmu_config[4, 7] = pmevcnt_paired | (1 << wp_index)
-        dtc_counter_index = self.dtc.next_counter()
-        pmevcnt_global_num_bitrange = (16+wp_index*4, 18+wp_index*4)
-        por_dtm_pmu_config[pmevcnt_global_num_bitrange] = dtc_counter_index
-        # - set por_dtm_pmu_config.cntr_rst to clear counter on shapshot
-        por_dtm_pmu_config[8] = 1
-        self.xp_node.write_off(0x2210, por_dtm_pmu_config.value)
+        # enable trace fifo
+        if cmd == 'trace':
+            por_dtm_control = self.xp_node.read_off(0x2100)
+            por_dtm_control[3] = 1  # trace_no_atb
+            self.xp_node.write_off(0x2100, por_dtm_control.value)
+        # program por_dtm_pmu_config
+        dtc_counter_index = -1
+        if cmd == 'stat':
+            por_dtm_pmu_config = self.xp_node.read_off(0x2210)
+            # - set watchpoint as PMU counter input
+            pmevcnt_input_sel_bitrange = (32+wp_index*8, 39+wp_index*8)
+            por_dtm_pmu_config[pmevcnt_input_sel_bitrange] = wp_index
+            # - pair 16bit DTM counter with 32bit DTC counter to 48bit
+            pmevcnt_paired = por_dtm_pmu_config[4, 7]
+            por_dtm_pmu_config[4, 7] = pmevcnt_paired | (1 << wp_index)
+            dtc_counter_index = self.dtc.next_counter()
+            pmevcnt_global_num_bitrange = (16+wp_index*4, 18+wp_index*4)
+            por_dtm_pmu_config[pmevcnt_global_num_bitrange] = dtc_counter_index
+            # - set por_dtm_pmu_config.cntr_rst to clear counter on shapshot
+            por_dtm_pmu_config[8] = 1
+            self.xp_node.write_off(0x2210, por_dtm_pmu_config.value)
         # save pmu info to event object
         event.save_pmu_info(self, wp_index, dtc_counter_index)
 
-    def enable(self) -> None:
-        # 4.4.9.1 setup PMU counters
-        # set por_dtm_pmu_config.pmu_en
-        por_dtm_pmu_config = self.xp_node.read_off(0x2210)
-        if por_dtm_pmu_config[0] == 0:
-            por_dtm_pmu_config[0] = 1
-            self.xp_node.write_off(0x2210, por_dtm_pmu_config.value)
-        # 4.4.8.1 program DTM watchpoint
+    # must be called after configure(), configure DTM of first event
+    def configure_trace(self, enable_tracetag:bool) -> None:
         por_dtm_control = self.xp_node.read_off(0x2100)
-        # TODO: trace (trace_no_atb, trace_tag_enable)
-        # set por_dtm_control.dtm_enable, must be last
+        # any XP sets trace_no_atb enables trace fifo
+        por_dtm_control[3] = 1  # trace_no_atb
+        if enable_tracetag:
+            por_dtm_control[1] = 1  # trace_tag_enable
+        self.xp_node.write_off(0x2100, por_dtm_control.value)
+
+    def enable_tracetag(self) -> None:
+        por_dtm_control = self.xp_node.read_off(0x2100)
+        por_dtm_control[1] = 1  # trace_tag_enable
+        self.xp_node.write_off(0x2100, por_dtm_control.value)
+
+    def enable(self, cmd:str) -> None:
+        # enable pmu
+        if cmd == 'stat':
+            por_dtm_pmu_config = self.xp_node.read_off(0x2210)
+            if por_dtm_pmu_config[0] == 0:
+                por_dtm_pmu_config[0] = 1  # pmu_en
+                self.xp_node.write_off(0x2210, por_dtm_pmu_config.value)
+        # enable dtm (must be last)
+        por_dtm_control = self.xp_node.read_off(0x2100)
         if por_dtm_control[0] == 0:
-            por_dtm_control[0] = 1
+            por_dtm_control[0] = 1  # dtm_en
             self.xp_node.write_off(0x2100, por_dtm_control.value)
 
     def read_pmu_counter(self, wp_index, dtc_counter_index) -> int:
-        # 4.4.9.2 program pmu snapshot
         # wait for dtc pmu counter ready
-        # TODO: trace cycle counter: (por_dt_pmssr[8], por_dt_pmccntr)
         timeout_ms = 100
         while True:
             # poll por_dt_pmssr.ss_status
@@ -277,23 +307,23 @@ class _PMU:
             dtc = self.get_dtc(cmn_index, xp_node.dtc_domain)
             dtc0 = self.get_dtc(cmn_index, 0)
             self.dtms[(cmn_index, xp_nid)] = _DTM(xp_node, dtc, dtc0)
-            logging.info(f'DTM probed at cmn{cmn_index} nodeid={xp_nid}')
+            logging.debug(f'DTM probed at cmn{cmn_index} nodeid={xp_nid}')
         return self.dtms[(cmn_index, xp_nid)]
 
     def get_dtc(self, cmn_index:int, dtc_domain:int) -> _DTC:
         if (cmn_index, dtc_domain) not in self.dtcs:
             dtc_node = self.get_mesh(cmn_index).dtcs[dtc_domain]
             self.dtcs[(cmn_index, dtc_domain)] = _DTC(dtc_node)
-            logging.info(f'DTC probed at cmn{cmn_index} domain={dtc_domain}')
+            logging.debug(f'DTC probed at cmn{cmn_index} domain={dtc_domain}')
         return self.dtcs[(cmn_index, dtc_domain)]
 
-    # sequence: dtm, dtc, dtc0
-    def enable(self) -> None:
+    # sequence: dtm, dtc0
+    def enable(self, cmd:str) -> None:
         for _, dtm in self.dtms.items():
-            dtm.enable()
+            dtm.enable(cmd)
         for _, dtc in self.dtcs.items():
             if dtc.dtc_node.domain == 0:
-                dtc.enable0()
+                dtc.enable0(cmd)
 
     # reset all DTM and DTC in used meshes
     def reset(self) -> None:
@@ -305,7 +335,7 @@ class _PMU:
                 for xp_node in xp_col:
                     xp_node.reset()
 
-    # yield event statistics
+    # snapshot and yield event statistics
     def snapshot(self, events) -> Generator[[str, int], None, None]:
         # 4.4.9.2 program PMU snapshot
         # - set por_dt_pmsrr.ss_req to trigger snapshot
@@ -318,25 +348,116 @@ class _PMU:
             counter = dtm.read_pmu_counter(wp_index, dtc_counter_index)
             yield event.name, counter
 
+    # check and copy trace packets to event trace buffer
+    def trace(self, events) -> None:
+        for event in events:
+            dtm, wp_index, _ = event.pmu_info
+            por_dtm_fifo_entry_ready = dtm.xp_node.read_off(0x2118)
+            if por_dtm_fifo_entry_ready[wp_index]:
+                por_dtm_fifo_entry_0 = dtm.xp_node.read_off(0x2120+wp_index*24)
+                por_dtm_fifo_entry_1 = dtm.xp_node.read_off(0x2128+wp_index*24)
+                por_dtm_fifo_entry_2 = dtm.xp_node.read_off(0x2130+wp_index*24)
+                event.packets.append(Packet(por_dtm_fifo_entry_0.value,
+                                            por_dtm_fifo_entry_1.value,
+                                            por_dtm_fifo_entry_2.value))
+                dtm.xp_node.write_off(0x2118, 1 << wp_index)
 
-def _reset_pmu(signal, frame):
+
+def _reset_pmu(signal, frame) -> None:
     _PMU().reset()
     exit(0)
 
 
+def _profile_stat(args, pmu:_PMU, events:List[_Event]) -> None:
+    if args.timeout > 0:
+        print(f'stop in {args.timeout} msec')
+    else:
+        print('press ctrl-c to stop')
+    iterations = args.timeout // args.interval
+    interval_sec = args.interval / 1000.0
+    # configure dtm
+    for event in events:
+        dtm = pmu.get_dtm(event.mesh, event.xp_nid)
+        dtm.configure(event, args.cmd)
+    # configure dtc
+    for _, dtc in pmu.dtcs.items():
+        dtc.configure(args.cmd)
+    # start counting
+    pmu.enable(args.cmd)
+    # output statistics periodically
+    next_time = time.time()
+    while args.timeout <= 0 or iterations > 0:
+        next_time += interval_sec
+        sleep_duration = next_time - time.time()
+        if sleep_duration > 0:
+            time.sleep(sleep_duration)
+        else:
+            logger.warning('run time exceeds stat interval')
+            next_time = time.time()
+        print('-'*80)
+        counters = pmu.snapshot(events)
+        for ev_name, ev_counter in counters:
+            print(f'{ev_name[:64]:<65}{ev_counter:>15,}')
+        iterations -= 1
+
+
+def _profile_trace(args, pmu:_PMU, events:List[_Event]) -> None:
+    msg = f'stop when recorded packet size reaches {args.max_size}MiB, or '
+    if args.timeout > 0:
+        msg += f'after {args.timeout} msec'
+    else:
+        msg += 'ctrl-c to stop immediately'
+    print(msg)
+    iterations = int(args.timeout / args.interval)
+    interval_sec = args.interval / 1000.0
+    if args.tracetag:
+        # invalidate wp_val and wp_mask for all events except the first
+        # one as only the first event triggers tracetag
+        for event in events[1:]:
+            if event.matches:
+                logger.warning(f'matchgroup ignored: {event.matches}')
+            event.wp_val_mask = (0, 0)
+    # configure dtm
+    for event in events:
+        dtm = pmu.get_dtm(event.mesh, event.xp_nid)
+        dtm.configure(event, args.cmd)
+    # enable tracetag for first event
+    if args.tracetag:
+        event0_dtm, _, _ = events[0].pmu_info
+        event0_dtm.enable_tracetag()
+    # configure dtc
+    for _, dtc in pmu.dtcs.items():
+        dtc.configure(args.cmd)
+    # start tracing
+    pmu.enable(args.cmd)
+    # busy poll trace fifo and output statistics periodically
+    last_counts = [0] * len(events)
+    while args.timeout <= 0 or iterations > 0:
+        next_time = time.time() + interval_sec
+        while time.time() < next_time:
+            pmu.trace(events)
+        print('-'*80)
+        for i, event in enumerate(events):
+            count = len(event.packets)
+            print(f'{event.name[:64]:<65}{(count-last_counts[i]):>15,}')
+            last_counts[i] = count
+        iterations -= 1
+
+
 def profile(args) -> None:
-    if args.interval < 100 or args.interval > 1_000_000:
-        raise Exception('interval must be within 100 to 1000000 ms')
-    interval_seconds = args.interval / 1000.0
+    if args.interval < 100 or args.interval > 100_000:
+        raise Exception('interval must be within 100 to 100_000 msec')
+    if 0 < args.timeout < args.interval:
+        raise Exception('profile timeout less then report interval')
     # -e cmn0/xp=10,.../,cmn1/xp=20,.../ -e cmn2/xp=30,.../
     events:List[_Event] = []
     for events_str in args.event:
-        if not re.match(r'^(cmn\d+/[^/]*/)(,cmn\d+/[^/]*/)*$', events_str,
-                        re.IGNORECASE):
+        if not re.match(r'^(cmn\d+/[^/]*/)(,cmn\d+/[^/]*/)*$',
+                        events_str, re.IGNORECASE):
             raise Exception(f'invalid event {events_str}')
         # find all patterns of the form "cmnX/.../"
-        for event_str in re.findall(r'cmn\d+/[^/]+/', events_str,
-                                    re.IGNORECASE):
+        for event_str in re.findall(r'cmn\d+/[^/]+/',
+                                    events_str, re.IGNORECASE):
             events.append(_Event(event_str))
     if not events:
         raise Exception('no valid event found')
@@ -346,32 +467,20 @@ def profile(args) -> None:
         pmu.get_dtm(event.mesh, event.xp_nid)
     # cleanup possible pending operations
     pmu.reset()
+    # show profiling time and report interval
+    print('='*80)
+    print('start profiling ...')
+    print(f'report statistics once per {args.interval} msec')
     # register cleanup signal handlers
     signal.signal(signal.SIGINT, _reset_pmu)
     signal.signal(signal.SIGTERM, _reset_pmu)
+    # start profiling
     try:
-        # configure dtm
-        for event in events:
-            dtm = pmu.get_dtm(event.mesh, event.xp_nid)
-            dtm.configure(event)
-        # configure dtc
-        for _, dtc in pmu.dtcs.items():
-            dtc.configure()
-        # start pmu
-        pmu.enable()
-        # output statistics periodically
-        next_time = time.time()
-        while True:
-            next_time += interval_seconds
-            sleep_duration = next_time - time.time()
-            if sleep_duration > 0:
-                time.sleep(sleep_duration)
-            else:
-                logger.warning('run time exceeds stat interval')
-                next_time = time.time()
-            print('-'*80)
-            counters = pmu.snapshot(events)
-            for ev_name, ev_counter in counters:
-                print(f'{ev_name[:64]:<65}{ev_counter:>15,}')
+        if args.cmd == 'stat':
+            _profile_stat(args, pmu, events)
+        elif args.cmd == 'trace':
+            _profile_trace(args, pmu, events)
+        else:
+            raise Exception(f'unknown command {args.cmd}')
     finally:
         pmu.reset()

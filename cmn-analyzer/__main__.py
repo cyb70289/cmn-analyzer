@@ -31,8 +31,7 @@ def parse_args():
     group.add_argument('-i', '--input', type=str, metavar='file',
                        help='read mesh info from JSON file')
     # args for both "stat" and "trace"
-    stat_trace_parser = \
-        argparse.ArgumentParser(add_help=False)
+    stat_trace_parser = argparse.ArgumentParser(add_help=False)
     event_help = (
         'watchpoint events: -e event1,event2 -e event3 ...\n'
         'examples:\n'
@@ -45,7 +44,9 @@ def parse_args():
                                    action='append', required=True,
                                    help=event_help)
     stat_trace_parser.add_argument('-I', '--interval', type=int, default=1000,
-                                   metavar='ms', help='print interval')
+                                   metavar='msec', help='report interval')
+    stat_trace_parser.add_argument('-t', '--timeout', type=int, default=0,
+                                   metavar='sec', help='time to do profiling')
     stat_parser = \
         subparsers.add_parser('stat', help='count events',
                               parents=[common_parser, stat_trace_parser],
@@ -55,6 +56,9 @@ def parse_args():
                               parents=[common_parser, stat_trace_parser],
                               formatter_class=RawTextHelpFormatter)
     # args only for "trace"
+    trace_parser.add_argument('-s', '--max-size', type=int, default=256,
+                              metavar='MiB',
+                              help='maximal total packet size to stop tracing')
     trace_parser.add_argument('--tracetag', action='store_true',
                               help='enable tracetag, triggered by first event')
     args = parser.parse_args()

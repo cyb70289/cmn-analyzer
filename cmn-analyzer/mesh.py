@@ -288,7 +288,7 @@ class NodeMXP(_NodeBase):
                 child_nodes[(p, d)] = []
         for i, node in enumerate(self._child_nodes):
             if (node.p, node.d) not in child_nodes:
-                logging.warning('ignore out of bound child node '
+                logging.debug('ignore out of bound child node '
                                 f'at XP{self.node_id} port{node.p} '
                                 f'device{node.d} {node.type}')
                 continue
