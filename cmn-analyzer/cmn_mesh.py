@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import logging
 from typing import Dict, List, Tuple
 
-from iodrv import CmnRegister
+from cmn_iodrv import CmnRegister
 
 
 logger = logging.getLogger(__name__)
@@ -144,7 +142,8 @@ class NodeCFG(_NodeBase):
         self.xps = self._xp_list_to_array(xp_list)
         self.multi_dtm_enabled = self._multi_dtm_enabled()
 
-    def _probe_xp(self) -> List[NodeMXP]:
+    # returns List[NodeMXP]
+    def _probe_xp(self):
         xp_list = []
         logging.debug(f'found {self._child_count} cross points')
         for i in range(self._child_count):
@@ -160,7 +159,8 @@ class NodeCFG(_NodeBase):
             xp_list.append(NodeMXP(self, xp_node_info, xp_node_offset))
         return xp_list
 
-    def _xp_list_to_array(self, xp_list) -> List[List[NodeMXP]]:
+    # returns List[List[NodeMXP]]
+    def _xp_list_to_array(self, xp_list):
         def _get_mesh_dimension() -> Tuple[int, int]:
             # XXX: dirty knowledge from linux arm-cmn driver
             # - x-dim = xp.logical_id if xp.node_id == 8

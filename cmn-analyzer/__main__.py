@@ -1,13 +1,13 @@
 import argparse
 import json
 import logging
-import sys
 from argparse import RawTextHelpFormatter
 from pprint import pprint
 
-from iodrv import CmnIodrv
-from mesh import Mesh
-from pmu import profile
+from cmn_iodrv import CmnIodrv
+from cmn_mesh import Mesh
+from pmu_stat import profile_stat
+from pmu_trace import profile_trace
 
 
 logger = logging.getLogger(__name__)
@@ -97,8 +97,10 @@ def main():
             mesh = Mesh(iodrv)
             logging.info(f'CMN mesh{args.mesh} probed')
             mesh_info = generate_mesh_info(mesh, args)
-    elif args.cmd == 'stat' or args.cmd == 'trace':
-        profile(args)
+    elif args.cmd == 'stat':
+        profile_stat(args)
+    elif args.cmd == 'trace':
+        profile_trace(args)
 
 
 if __name__ == "__main__":
