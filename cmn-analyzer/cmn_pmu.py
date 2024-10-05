@@ -146,7 +146,6 @@ class DTC(ABC):
 
 class DTM(ABC):
     def __init__(self, xp_node:NodeMXP, dtc:DTC, dtc0:DTC) -> None:
-        # XXX: multiple DTM not supported yet
         cfg_node = xp_node.parent
         n_ports = len(xp_node.port_devs)
         if cfg_node.multi_dtm_enabled and n_ports > 2:
@@ -222,14 +221,18 @@ class PMU(ABC):
             xp_node = mesh.xps[xp_nid]
             dtc = self.get_dtc(cmn_index, xp_node.dtc_domain)
             dtc0 = self.get_dtc(cmn_index, 0)
-            self.dtms[(cmn_index, xp_nid)] = self.DTM(xp_node, dtc, dtc0)
+            # "DTM" attribute only defined in derived class
+            dtm = self.DTM(xp_node, dtc, dtc0)  # type: ignore
+            self.dtms[(cmn_index, xp_nid)] = dtm
             logging.debug(f'dtm probed at cmn{cmn_index} nodeid={xp_nid}')
         return self.dtms[(cmn_index, xp_nid)]
 
     def get_dtc(self, cmn_index:int, dtc_domain:int) -> DTC:
         if (cmn_index, dtc_domain) not in self.dtcs:
             dtc_node = self.get_mesh(cmn_index).dtcs[dtc_domain]
-            self.dtcs[(cmn_index, dtc_domain)] = self.DTC(dtc_node)
+            # "DTC" attribute only defined in derived class
+            dtc = self.DTC(dtc_node)  # type: ignore
+            self.dtcs[(cmn_index, dtc_domain)] = dtc
             logging.debug(f'dtc probed at cmn{cmn_index} domain={dtc_domain}')
         return self.dtcs[(cmn_index, dtc_domain)]
 

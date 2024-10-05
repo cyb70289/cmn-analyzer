@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 import struct
 import time
-from typing import List, Tuple, Union
+from typing import cast, Any, List, Tuple, TypeVar, Union
 
 from cmn_pmu import DTC, DTM, Event, PMU, start_profile
 
@@ -50,7 +52,7 @@ class _TraceEvent(Event):
         self.packets:List[Packet] = []
 
     # save pmu info for profiling
-    def save_pmu_info(self, dtm:DTM, wp_index:int) -> None:
+    def save_pmu_info(self, dtm:_TraceDTM, wp_index:int) -> None:
         self.pmu_info = (dtm, wp_index)
 
 
@@ -68,7 +70,7 @@ class _TraceDTC(DTC):
 
 
 class _TraceDTM(DTM):
-    def configure(self, event:_TraceEvent) -> None:
+    def configure(self, event:Event) -> Any:
         # configure watchpoint
         wp_index = super().configure(event)
         # program por_dtm_wp0-3_config to trace control flit with cycle count
@@ -130,6 +132,8 @@ def profile_trace(args) -> None:
     print(msg)
     # start profiling
     pmu, events = start_profile(args, _TracePMU)
+    pmu = cast(_TracePMU, pmu)
+    events = [cast(_TraceEvent, event) for event in events]
     if args.tracetag:
         # invalidate wp_val and wp_mask for all events except the first
         # one as only the first event triggers tracetag

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import Dict, List, Tuple
 
@@ -142,8 +144,7 @@ class NodeCFG(_NodeBase):
         self.xps = self._xp_list_to_array(xp_list)
         self.multi_dtm_enabled = self._multi_dtm_enabled()
 
-    # returns List[NodeMXP]
-    def _probe_xp(self):
+    def _probe_xp(self) -> List[NodeMXP]:
         xp_list = []
         logging.debug(f'found {self._child_count} cross points')
         for i in range(self._child_count):
@@ -159,8 +160,7 @@ class NodeCFG(_NodeBase):
             xp_list.append(NodeMXP(self, xp_node_info, xp_node_offset))
         return xp_list
 
-    # returns List[List[NodeMXP]]
-    def _xp_list_to_array(self, xp_list):
+    def _xp_list_to_array(self, xp_list) -> List[List[NodeMXP]]:
         def _get_mesh_dimension() -> Tuple[int, int]:
             # XXX: dirty knowledge from linux arm-cmn driver
             # - x-dim = xp.logical_id if xp.node_id == 8

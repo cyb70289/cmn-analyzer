@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import logging
 import time
-from typing import Generator, List, Tuple
+from typing import cast, Any, Generator, List, Tuple, Union
 
 from cmn_pmu import DTC, DTM, Event, PMU, start_profile
 
@@ -10,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class _StatEvent(Event):
     # save pmu info for profiling
-    def save_pmu_info(self, dtm:DTM, wp_index:int, dtc_counter_index:int):
+    def save_pmu_info(self, dtm:_StatDTM, wp_index:int, dtc_counter_index:int):
         self.pmu_info = (dtm, wp_index, dtc_counter_index)
 
 
@@ -33,7 +35,7 @@ class _StatDTC(DTC):
 
 
 class _StatDTM(DTM):
-    def configure(self, event:_StatEvent) -> None:
+    def configure(self, event:Event) -> Any:
         # configure watchpoint
         wp_index = super().configure(event)
         # program por_dtm_pmu_config
@@ -102,7 +104,7 @@ class _StatPMU(PMU):
 
     # snapshot and yield event statistics
     def snapshot(self, events:List[_StatEvent]) \
-            -> Generator[[str, int], None, None]:
+            -> Generator[Tuple[str, int], None, None]:
         # set por_dt_pmsrr.ss_req to trigger snapshot
         for _, dtc in self.dtcs.items():
             if dtc.dtc_node.domain == 0:
@@ -121,6 +123,8 @@ def profile_stat(args) -> None:
         print('press ctrl-c to stop')
     # start profiling
     pmu, events = start_profile(args, _StatPMU)
+    pmu = cast(_StatPMU, pmu)
+    events = [cast(_StatEvent, event) for event in events]
     # configure dtm
     for event in events:
         dtm = pmu.get_dtm(event.mesh, event.xp_nid)
