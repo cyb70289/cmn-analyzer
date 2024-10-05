@@ -73,6 +73,9 @@ class CmnIodrv:
         # - void iowrite(uint64_t addr, uint64_t value)
         lib.iowrite.argtypes = [ctypes.c_uint64, ctypes.c_uint64]
         lib.iowrite.restype = None
+        # - void ioread_raw(uint64_t reg_addr, uint64_t value_addr)
+        lib.ioread_raw.argtypes = [ctypes.c_uint64, ctypes.c_uint64]
+        lib.ioread_raw.restype = None
         # map the device register space
         base = lib.iommap(dev_file.encode('ascii'), size, readonly)
         return lib, base, size
@@ -85,3 +88,6 @@ class CmnIodrv:
     def write(self, reg:int, value:int) -> None:
         assert reg + 8 <= self.size
         self.lib.iowrite(self.base + reg, value)
+
+    def read_raw(self, reg:int, ptr) -> None:
+        self.lib.ioread_raw(self.base + reg, ptr)

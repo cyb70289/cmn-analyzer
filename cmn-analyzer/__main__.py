@@ -56,11 +56,12 @@ def parse_args():
                               parents=[common_parser, stat_trace_parser],
                               formatter_class=RawTextHelpFormatter)
     # args only for "trace"
-    trace_parser.add_argument('-s', '--max-size', type=int, default=256,
-                              metavar='MiB',
-                              help='maximal total packet size to stop tracing')
     trace_parser.add_argument('--tracetag', action='store_true',
                               help='enable tracetag, triggered by first event')
+    trace_parser.add_argument('--max-size', type=int, default=256, metavar='MB',
+                              help='maximal total packet size to stop tracing')
+    trace_parser.add_argument('-o', '--output', type=str, metavar='file',
+                              help='file name to save trace packets')
     args = parser.parse_args()
     return args
 

@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import ctypes
 import logging
+import os
+import pickle
+import shutil
 import struct
+from sys import getsizeof
 import time
-from typing import cast, Any, List, Tuple, TypeVar, Union
+from typing import cast, Any, Dict, List, Tuple, TypeVar, Union
 
 from cmn_pmu import DTC, DTM, Event, PMU, start_profile
 
@@ -12,7 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class Packet:
-    def __init__(self, a, b, c):
+    # one trace packet (control flit) contains 3 x 64bits
+    size = 3 * 8
+
+    def __init__(self, a:int, b:int, c:int):
         self._data = struct.pack('<QQQ', a, b, c)
 
     # get bits in [start, end], *inclusive*
@@ -46,10 +54,38 @@ class Packet:
         return result
 
 
+class PacketBuffer:
+    chunk_memory_size:int = 4 * 1024 * 1024  # 4MiB chunk
+    packets_per_chunk:int = chunk_memory_size // Packet.size
+    max_offset:int = packets_per_chunk * Packet.size
+
+    def __init__(self) -> None:
+        buffer = bytearray(self.chunk_memory_size)
+        self._current_base = \
+            ctypes.addressof(ctypes.c_char.from_buffer(buffer, 0))
+        self._current_offset = 0
+        self.buffers = [buffer]
+        # number of packets in buffers
+        self.size = 0
+
+    # return a raw pointer address to store next packet
+    def next_packet_ptr(self) -> int:
+        if self._current_offset >= self.max_offset:
+            buffer = bytearray(self.chunk_memory_size)
+            self.buffers.append(buffer)
+            self._current_base = \
+                ctypes.addressof(ctypes.c_char.from_buffer(buffer, 0))
+            self._current_offset = 0
+        offset = self._current_offset
+        self.size += 1
+        self._current_offset += Packet.size
+        return self._current_base + offset
+
+
 class _TraceEvent(Event):
     def __init__(self, event_str:str) -> None:
         super().__init__(event_str)
-        self.packets:List[Packet] = []
+        self.packets = PacketBuffer()
 
     # save pmu info for profiling
     def save_pmu_info(self, dtm:_TraceDTM, wp_index:int) -> None:
@@ -102,11 +138,18 @@ class _TracePMU(PMU):
 
     @staticmethod
     def exit_handler(signal, frame) -> None:
-        _TracePMU().reset()
+        pmu = _TracePMU()
+        pmu.reset()
+        pmu.save_packets()
         exit(0)
 
     def __new__(cls, *args, **kwargs):
         return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.events:List[_TraceEvent]
+        self.out_file:str
 
     # check and copy trace packets to event trace buffer
     def trace(self, events) -> None:
@@ -114,17 +157,43 @@ class _TracePMU(PMU):
             dtm, wp_index = event.pmu_info
             por_dtm_fifo_entry_ready = dtm.xp_node.read_off(0x2118)
             if por_dtm_fifo_entry_ready[wp_index]:
-                por_dtm_fifo_entry_0 = dtm.xp_node.read_off(0x2120+wp_index*24)
-                por_dtm_fifo_entry_1 = dtm.xp_node.read_off(0x2128+wp_index*24)
-                por_dtm_fifo_entry_2 = dtm.xp_node.read_off(0x2130+wp_index*24)
-                event.packets.append(Packet(por_dtm_fifo_entry_0.value,
-                                            por_dtm_fifo_entry_1.value,
-                                            por_dtm_fifo_entry_2.value))
+                # copy por_dtm_fifo_entry_0,1,2 directly to packer buffer
+                ptr = event.packets.next_packet_ptr()
+                dtm.xp_node.read_off_raw(0x2120+wp_index*24, ptr)
+                dtm.xp_node.read_off_raw(0x2128+wp_index*24, ptr+8)
+                dtm.xp_node.read_off_raw(0x2130+wp_index*24, ptr+16)
+                # clear ready bit to receive packet again
                 dtm.xp_node.write_off(0x2118, 1 << wp_index)
+
+    def save_packets(self) -> None:
+        print('='*80)
+        if os.path.isfile(self.out_file):
+            backup_filename = f'{self.out_file}.old'
+            shutil.move(self.out_file, backup_filename)
+        print(f'save packets to {self.out_file} ...')
+        pk_data = []
+        total_packets = 0;
+        for event in self.events:
+            data = {
+                'mesh': event.mesh,
+                'xp_nid': event.xp_nid,
+                'port': event.port,
+                'channel': event.channel,
+                'direction': event.direction,
+                'group': event.group,
+                'matches': event.matches,
+                'packets': event.packets if event.packets.size > 0 else None
+            }
+            pk_data.append(data)
+            total_packets += event.packets.size
+        with open(self.out_file, 'wb') as file:
+            pickle.dump(pk_data, file)
+        file_size = os.path.getsize(self.out_file)
+        print(f'total packets:{total_packets:,}, file size:{file_size:,}')
 
 
 def profile_trace(args) -> None:
-    msg = f'stop when recorded packet size reaches {args.max_size}MiB, or '
+    msg = f'stop when recorded packet size reaches {args.max_size}MB, or '
     if args.timeout > 0:
         msg += f'after {args.timeout} msec'
     else:
@@ -134,6 +203,9 @@ def profile_trace(args) -> None:
     pmu, events = start_profile(args, _TracePMU)
     pmu = cast(_TracePMU, pmu)
     events = [cast(_TraceEvent, event) for event in events]
+    # save events to pmu singleton to save packets on exit
+    pmu.events = events
+    pmu.out_file = args.output if args.output else 'trace.data'
     if args.tracetag:
         # invalidate wp_val and wp_mask for all events except the first
         # one as only the first event triggers tracetag
@@ -141,30 +213,42 @@ def profile_trace(args) -> None:
             if event.matches:
                 logger.warning(f'matchgroup ignored: {event.matches}')
             event.wp_val_mask = (0, 0)
-    # configure dtm
-    for event in events:
-        dtm = pmu.get_dtm(event.mesh, event.xp_nid)
-        dtm.configure(event)
-    # enable tracetag for first event
-    if args.tracetag:
-        event0_dtm, _ = events[0].pmu_info
-        event0_dtm.enable_tracetag()
-    # configure dtc
-    for _, dtc in pmu.dtcs.items():
-        dtc.configure()
-    # start tracing
-    pmu.enable()
-    # busy poll trace fifo and output statistics periodically
-    iterations = args.timeout // args.interval
-    interval_sec = args.interval / 1000.0
-    last_counts = [0] * len(events)
-    while args.timeout <= 0 or iterations > 0:
-        next_time = time.time() + interval_sec
-        while time.time() < next_time:
-            pmu.trace(events)
-        print('-'*80)
-        for i, event in enumerate(events):
-            count = len(event.packets)
-            print(f'{event.name[:64]:<65}{(count-last_counts[i]):>15,}')
-            last_counts[i] = count
-        iterations -= 1
+            # reconstruct event name to make clear wp val and mask are ignored
+            event.name = f'cmn{event.mesh}-xp{event.xp_nid}-port{event.port}' \
+                         f'-{event.direction}-tracetag'
+    try:
+        # configure dtm
+        for event in events:
+            dtm = pmu.get_dtm(event.mesh, event.xp_nid)
+            dtm.configure(event)
+        # enable tracetag for first event
+        if args.tracetag:
+            event0_dtm, _ = events[0].pmu_info
+            event0_dtm.enable_tracetag()
+        # configure dtc
+        for _, dtc in pmu.dtcs.items():
+            dtc.configure()
+        # start tracing
+        pmu.enable()
+        # busy poll trace fifo and output statistics periodically
+        iterations = args.timeout // args.interval
+        interval_sec = args.interval / 1000.0
+        max_packets = args.max_size*1000*1000 / Packet.size
+        last_counts = [0] * len(events)
+        while args.timeout <= 0 or iterations > 0:
+            next_time = time.time() + interval_sec
+            while time.time() < next_time:
+                pmu.trace(events)
+            print('-'*80)
+            total_packets = 0
+            for i, event in enumerate(events):
+                count = event.packets.size
+                print(f'{event.name[:64]:<65}{(count-last_counts[i]):>15,}')
+                last_counts[i] = count
+                total_packets += count
+            if total_packets >= max_packets:
+                print('file size reached limit, stop tracing')
+                pmu.exit_handler(0, 0)
+            iterations -= 1
+    finally:
+        pmu.reset()

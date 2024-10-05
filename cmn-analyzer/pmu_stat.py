@@ -125,29 +125,32 @@ def profile_stat(args) -> None:
     pmu, events = start_profile(args, _StatPMU)
     pmu = cast(_StatPMU, pmu)
     events = [cast(_StatEvent, event) for event in events]
-    # configure dtm
-    for event in events:
-        dtm = pmu.get_dtm(event.mesh, event.xp_nid)
-        dtm.configure(event)
-    # configure dtc
-    for _, dtc in pmu.dtcs.items():
-        dtc.configure()
-    # start counting
-    pmu.enable()
-    # output statistics periodically
-    iterations = args.timeout // args.interval
-    interval_sec = args.interval / 1000.0
-    next_time = time.time()
-    while args.timeout <= 0 or iterations > 0:
-        next_time += interval_sec
-        sleep_duration = next_time - time.time()
-        if sleep_duration > 0:
-            time.sleep(sleep_duration)
-        else:
-            logger.warning('run time exceeds stat interval')
-            next_time = time.time()
-        print('-'*80)
-        counters = pmu.snapshot(events)
-        for ev_name, ev_counter in counters:
-            print(f'{ev_name[:64]:<65}{ev_counter:>15,}')
-        iterations -= 1
+    try:
+        # configure dtm
+        for event in events:
+            dtm = pmu.get_dtm(event.mesh, event.xp_nid)
+            dtm.configure(event)
+        # configure dtc
+        for _, dtc in pmu.dtcs.items():
+            dtc.configure()
+        # start counting
+        pmu.enable()
+        # output statistics periodically
+        iterations = args.timeout // args.interval
+        interval_sec = args.interval / 1000.0
+        next_time = time.time()
+        while args.timeout <= 0 or iterations > 0:
+            next_time += interval_sec
+            sleep_duration = next_time - time.time()
+            if sleep_duration > 0:
+                time.sleep(sleep_duration)
+            else:
+                logger.warning('run time exceeds stat interval')
+                next_time = time.time()
+            print('-'*80)
+            counters = pmu.snapshot(events)
+            for ev_name, ev_counter in counters:
+                print(f'{ev_name[:64]:<65}{ev_counter:>15,}')
+            iterations -= 1
+    finally:
+        pmu.reset()

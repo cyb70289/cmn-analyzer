@@ -110,6 +110,9 @@ class _NodeBase:
     def write_off(self, reg:int, value:int) -> None:
         self._iodrv.write(self._reg_base + reg, value)
 
+    def read_off_raw(self, reg:int, ptr) -> None:
+        self._iodrv.read_raw(self._reg_base + reg, ptr)
+
 
 class NodeDN(_NodeBase): type = 'DVM'
 class NodeHNI(_NodeBase): type = 'HN-I'

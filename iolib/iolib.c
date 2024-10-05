@@ -32,3 +32,9 @@ void iowrite(uint64_t addr, uint64_t value) {
     volatile uint64_t *paddr = (volatile uint64_t *)addr;
     *paddr = value;
 }
+
+void ioread_raw(uint64_t reg_addr, uint64_t value_addr) {
+    volatile uint64_t *preg = (volatile uint64_t *)reg_addr;
+    uint64_t *pvalue = (uint64_t *)value_addr;
+    *pvalue = *preg;
+}
