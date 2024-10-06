@@ -153,4 +153,4 @@ def profile_stat(args) -> None:
                 print(f'{ev_name[:64]:<65}{ev_counter:>15,}')
             iterations -= 1
     finally:
-        pmu.reset()
+        pmu.exit_handler(0, 0)

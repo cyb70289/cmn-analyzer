@@ -6,9 +6,8 @@ import os
 import pickle
 import shutil
 import struct
-from sys import getsizeof
 import time
-from typing import cast, Any, Dict, List, Tuple, TypeVar, Union
+from typing import cast, Any, Dict, Generator, List, Tuple, Union
 
 from cmn_pmu import DTC, DTM, Event, PMU, start_profile
 
@@ -20,8 +19,8 @@ class Packet:
     # one trace packet (control flit) contains 3 x 64bits
     size = 3 * 8
 
-    def __init__(self, a:int, b:int, c:int):
-        self._data = struct.pack('<QQQ', a, b, c)
+    def __init__(self, data:bytearray) -> None:
+        self._data = data
 
     # get bits in [start, end], *inclusive*
     def __getitem__(self, bit_range:Union[Tuple[int, int], int]) -> int:
@@ -80,6 +79,13 @@ class PacketBuffer:
         self.size += 1
         self._current_offset += Packet.size
         return self._current_base + offset
+
+    def get_packet(self, index:int) -> Packet:
+        # XXX: index is not validated here
+        buffer_index, offset = divmod(index, self.packets_per_chunk)
+        buffer = self.buffers[buffer_index]
+        offset *= Packet.size
+        return Packet(buffer[offset:offset+Packet.size])
 
 
 class _TraceEvent(Event):
@@ -151,6 +157,19 @@ class _TracePMU(PMU):
         self.events:List[_TraceEvent]
         self.out_file:str
 
+    # FIXME: don't know why, but the first packet is always stale
+    def skip_first_packet(self, events) -> None:
+        for event in events:
+            timeout_ms = 10
+            dtm, wp_index = event.pmu_info
+            while True:
+                por_dtm_fifo_entry_ready = dtm.xp_node.read_off(0x2118)
+                if por_dtm_fifo_entry_ready[wp_index] or timeout_ms == 0:
+                    dtm.xp_node.write_off(0x2118, 1 << wp_index)
+                    break
+                time.sleep(0.001)
+                timeout_ms -= 1
+
     # check and copy trace packets to event trace buffer
     def trace(self, events) -> None:
         for event in events:
@@ -175,6 +194,7 @@ class _TracePMU(PMU):
         total_packets = 0;
         for event in self.events:
             data = {
+                'name': event.name,
                 'mesh': event.mesh,
                 'xp_nid': event.xp_nid,
                 'port': event.port,
@@ -205,7 +225,7 @@ def profile_trace(args) -> None:
     events = [cast(_TraceEvent, event) for event in events]
     # save events to pmu singleton to save packets on exit
     pmu.events = events
-    pmu.out_file = args.output if args.output else 'trace.data'
+    pmu.out_file = args.output
     if args.tracetag:
         # invalidate wp_val and wp_mask for all events except the first
         # one as only the first event triggers tracetag
@@ -228,8 +248,9 @@ def profile_trace(args) -> None:
         # configure dtc
         for _, dtc in pmu.dtcs.items():
             dtc.configure()
-        # start tracing
+        # start tracing, drop first packet
         pmu.enable()
+        pmu.skip_first_packet(events)
         # busy poll trace fifo and output statistics periodically
         iterations = args.timeout // args.interval
         interval_sec = args.interval / 1000.0
@@ -251,4 +272,4 @@ def profile_trace(args) -> None:
                 pmu.exit_handler(0, 0)
             iterations -= 1
     finally:
-        pmu.reset()
+        pmu.exit_handler(0, 0)
