@@ -115,3 +115,11 @@ def trace_report(args) -> None:
                 flit = flit_cls(packets.get_packet(index))
                 values = [flit.value(field) for field in fields]
                 csv_writer.writerow(values)
+        # print top 25 lines for quick review
+        if args.verbose:
+            with open(csv_filename, 'r', newline='') as file:
+                csv_reader = csv.reader(file)
+                for i, row in enumerate(csv_reader):
+                    if i == 25: break
+                    print(row)
+            print('-'*80)

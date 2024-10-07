@@ -95,8 +95,7 @@ class _StatPMU(PMU):
     DTC = _StatDTC
 
     @staticmethod
-    def exit_handler(signal, frame) -> None:
-        _StatPMU().reset()
+    def sigterm_handler(signal, frame) -> None:
         exit(0)
 
     def __new__(cls, *args, **kwargs):
@@ -152,5 +151,7 @@ def profile_stat(args) -> None:
             for ev_name, ev_counter in counters:
                 print(f'{ev_name[:64]:<65}{ev_counter:>15,}')
             iterations -= 1
+    except KeyboardInterrupt:
+        pass
     finally:
-        pmu.exit_handler(0, 0)
+        pmu.reset()

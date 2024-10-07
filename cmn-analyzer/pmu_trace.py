@@ -142,11 +142,11 @@ class _TracePMU(PMU):
     DTM = _TraceDTM
     DTC = _TraceDTC
 
+    killed = False
+
     @staticmethod
-    def exit_handler(signal, frame) -> None:
-        pmu = _TracePMU()
-        pmu.reset()
-        pmu.save_packets()
+    def sigterm_handler(signal, frame) -> None:
+        _TracePMU.killed = True
         exit(0)
 
     def __new__(cls, *args, **kwargs):
@@ -155,7 +155,6 @@ class _TracePMU(PMU):
     def __init__(self) -> None:
         super().__init__()
         self.events:List[_TraceEvent]
-        self.out_file:str
 
     # FIXME: don't know why, but the first packet is always stale
     def skip_first_packet(self, events) -> None:
@@ -184,12 +183,12 @@ class _TracePMU(PMU):
                 # clear ready bit to receive packet again
                 dtm.xp_node.write_off(0x2118, 1 << wp_index)
 
-    def save_packets(self) -> None:
+    def save_packets(self, out_file:str) -> None:
         print('='*80)
-        if os.path.isfile(self.out_file):
-            backup_filename = f'{self.out_file}.old'
-            shutil.move(self.out_file, backup_filename)
-        print(f'save packets to {self.out_file} ...')
+        if os.path.isfile(out_file):
+            backup_filename = f'{out_file}.old'
+            shutil.move(out_file, backup_filename)
+        print(f'save packets to {out_file} ...')
         pk_data = []
         total_packets = 0;
         for event in self.events:
@@ -206,9 +205,9 @@ class _TracePMU(PMU):
             }
             pk_data.append(data)
             total_packets += event.packets.size
-        with open(self.out_file, 'wb') as file:
+        with open(out_file, 'wb') as file:
             pickle.dump(pk_data, file)
-        file_size = os.path.getsize(self.out_file)
+        file_size = os.path.getsize(out_file)
         print(f'total packets:{total_packets:,}, file size:{file_size:,}')
 
 
@@ -225,7 +224,6 @@ def profile_trace(args) -> None:
     events = [cast(_TraceEvent, event) for event in events]
     # save events to pmu singleton to save packets on exit
     pmu.events = events
-    pmu.out_file = args.output
     if args.tracetag:
         # invalidate wp_val and wp_mask for all events except the first
         # one as only the first event triggers tracetag
@@ -235,7 +233,7 @@ def profile_trace(args) -> None:
             event.wp_val_mask = (0, 0)
             # reconstruct event name to make clear wp val and mask are ignored
             event.name = f'cmn{event.mesh}-xp{event.xp_nid}-port{event.port}' \
-                         f'-{event.direction}-tracetag'
+                         f'-{event.direction}-{event.channel}-tracetag'
     try:
         # configure dtm
         for event in events:
@@ -268,8 +266,13 @@ def profile_trace(args) -> None:
                 last_counts[i] = count
                 total_packets += count
             if total_packets >= max_packets:
-                print('file size reached limit, stop tracing')
-                pmu.exit_handler(0, 0)
+                logger.info('file size reached limit, stop tracing')
+                # finally block will save the trace logs
+                exit(0)
             iterations -= 1
+    except KeyboardInterrupt:
+        pass
     finally:
-        pmu.exit_handler(0, 0)
+        if not pmu.killed:
+            pmu.save_packets(args.output)
+        pmu.reset()

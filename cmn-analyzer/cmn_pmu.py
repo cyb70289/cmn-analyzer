@@ -193,7 +193,7 @@ class PMU(ABC):
 
     @staticmethod
     @abstractmethod
-    def exit_handler(signal, frame): pass
+    def sigterm_handler(signal, frame): pass
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -279,8 +279,7 @@ def start_profile(args, pmu_cls) -> Tuple[PMU, List[Event]]:
     # cleanup possible pending operations
     pmu.reset()
     # register cleanup signal handlers
-    signal.signal(signal.SIGINT, pmu_cls.exit_handler)
-    signal.signal(signal.SIGTERM, pmu_cls.exit_handler)
+    signal.signal(signal.SIGTERM, pmu_cls.sigterm_handler)
     # start profiling
     print('='*80)
     print('start profiling ...')
