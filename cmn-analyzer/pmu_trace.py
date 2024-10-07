@@ -9,7 +9,7 @@ import struct
 import time
 from typing import cast, Any, Dict, Generator, List, Tuple, Union
 
-from cmn_pmu import DTC, DTM, Event, PMU, start_profile
+from pmu_base import DTC, DTM, Event, PMU, start_profile
 
 
 logger = logging.getLogger(__name__)
