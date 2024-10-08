@@ -105,6 +105,7 @@ def trace_report(args) -> None:
             csv_writer.writerow(flit_cls.fields.keys())
             packets:PacketBuffer = event['packets']
             if not packets: continue
+            if args.max_records <= 0: args.max_records = packets.size
             if args.sample == 'header' or packets.size <= args.max_records:
                 indices = range(0, min(packets.size, args.max_records))
             elif args.sample == 'tail':

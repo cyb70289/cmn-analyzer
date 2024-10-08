@@ -79,7 +79,8 @@ def parse_args():
                                help='csv output dir (default "__csv__")')
     report_parser.add_argument('-n', '--max-records', type=int,
                                metavar='num', default=1000,
-                               help='maximal records per event (default 1000)')
+                               help='max records per event (default 1000)\n'
+                                    'specify "-n 0" to dump all records')
     report_parser.add_argument('-s', '--sample', type=str,
                                metavar='method', default='header',
                                choices=('header', 'tail', 'evenly', 'random'),
