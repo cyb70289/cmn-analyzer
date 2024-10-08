@@ -82,3 +82,10 @@ def get_wp_val_mask(channel:str, group:int, matches:Dict[str,Any]) \
         _value |= value
         _mask |= mask
     return _value, ~_mask
+
+# return a dict maps opcode to command string
+def get_opcode_cmd(channel:str) -> Dict[int, str]:
+    cmd_dict = {}
+    for opcode, cmd in _get_opcode_gen(channel):
+        cmd_dict[opcode] = cmd
+    return cmd_dict

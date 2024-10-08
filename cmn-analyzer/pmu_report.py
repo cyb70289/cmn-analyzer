@@ -5,6 +5,7 @@ import pickle
 import random
 from typing import Dict
 
+from flit.event import get_opcode_cmd
 from pmu_trace import Packet, PacketBuffer
 
 
@@ -85,12 +86,13 @@ def trace_report(args) -> None:
         events = pickle.load(file)
     os.makedirs(args.out_dir, exist_ok=True)
     for event in events:
+        channel = event['channel']
         flit_cls = {
             'req': _ReqFlit,
             'rsp': _RspFlit,
             'snp': _SnpFlit,
             'dat': _DatFlit,
-        }[event['channel']]
+        }[channel]
         csv_filename = f'{args.out_dir}/{event["name"]}-{args.sample}.csv'
         with open(csv_filename, 'w', newline='') as file:
             csv_writer = csv.writer(file)
@@ -111,12 +113,20 @@ def trace_report(args) -> None:
             else:
                 assert False
             print(f'write {len(indices):,} records to {csv_filename} ...')
+            opcode_to_cmd = get_opcode_cmd(channel)
             for index in indices:
                 flit = flit_cls(packets.get_packet(index))
-                values = [flit.value(field) for field in fields]
+                values = []
+                for field in fields:
+                    value = flit.value(field)
+                    if field == 'opcode':
+                        value = opcode_to_cmd[value]  # opcode -> command str
+                    elif field == 'addr':
+                        value = f'{value:x}'  # addr -> hex format
+                    values.append(value)
                 csv_writer.writerow(values)
-        # print top 25 lines for quick review
         if args.verbose:
+            print('dump top 25 lines for quick review')
             with open(csv_filename, 'r', newline='') as file:
                 csv_reader = csv.reader(file)
                 for i, row in enumerate(csv_reader):
