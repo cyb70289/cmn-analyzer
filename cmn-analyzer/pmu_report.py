@@ -31,9 +31,10 @@ class _ReqFlit(_Flit):
     fields = {
         'srcid': (15, 25),
         'tgtid': (4, 14),
-        'opcode': (62, 68),
         'txnid': (26, 37),
+        'opcode': (62, 68),
         'lpid': (86, 90),
+        'mpam': (99, 109),
         'addr': (110, 161),
         'cycle': (128+48, 128+63),
     }
@@ -44,8 +45,8 @@ class _RspFlit(_Flit):
     fields = {
         'srcid': (15, 25),
         'tgtid': (4, 14),
-        'opcode': (38, 42),
         'txnid': (26, 37),
+        'opcode': (38, 42),
         'dbid': (54, 65),
         'cbusy': (51, 53),
         'cycle': (128+48, 128+63),
@@ -57,8 +58,10 @@ class _SnpFlit(_Flit):
     type = 'snp'
     fields = {
         'srcid': (4, 14),
-        'opcode': (50, 54),
+        'fwdnid': (27, 37),
         'txnid': (15, 26),
+        'opcode': (50, 54),
+        'mpam': (59, 69),
         'addr': (70, 118),
         'cycle': (128+48, 128+63),
     }
@@ -69,10 +72,12 @@ class _DatFlit(_Flit):
     fields = {
         'srcid': (15, 25),
         'tgtid': (4, 14),
-        'opcode': (49, 52),
         'txnid': (26, 37),
+        'opcode': (49, 52),
         'homenid': (38, 48),
         'dbid': (65, 76),
+        'resp': (55, 57),
+        'datasrc': (58, 61),  # datasrc|fwdstate|stash
         'cbusy': (62, 64),
         'cycle': (128+48, 128+63),
     }
