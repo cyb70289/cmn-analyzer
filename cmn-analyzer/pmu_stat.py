@@ -116,14 +116,14 @@ class _StatPMU(PMU):
 
 
 def profile_stat(args) -> None:
-    if args.timeout > 0:
-        print(f'stop in {args.timeout} msec')
-    else:
-        print('press ctrl-c to stop')
     # start profiling
     pmu, events = start_profile(args, _StatPMU)
     pmu = cast(_StatPMU, pmu)
     events = [cast(_StatEvent, event) for event in events]
+    if args.timeout > 0:
+        print(f'stop in {args.timeout} msec')
+    else:
+        print('press ctrl-c to stop')
     try:
         # configure dtm
         for event in events:

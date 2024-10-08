@@ -46,9 +46,10 @@ def parse_args():
                                    help=event_help)
     stat_trace_parser.add_argument('-I', '--interval', type=int,
                                    default=1000, metavar='msec',
-                                   help='report interval (default 1000msec)')
-    stat_trace_parser.add_argument('-t', '--timeout', type=int, default=0,
-                                   metavar='sec', help='time to do profiling')
+                                   help='report interval (default 1000 ms)')
+    stat_trace_parser.add_argument('-t', '--timeout', type=int,
+                                   default=0, metavar='sec',
+                                   help='run time in ms (default no stop)')
     stat_parser = \
         subparsers.add_parser('stat', help='count events',
                               parents=[common_parser, stat_trace_parser],
@@ -60,9 +61,9 @@ def parse_args():
     # args only for "trace"
     trace_parser.add_argument('--tracetag', action='store_true',
                               help='enable tracetag, triggered by first event')
-    trace_parser.add_argument('--max-size', type=int, default=256, metavar='MB',
+    trace_parser.add_argument('--max-size', type=int, default=64, metavar='MB',
                               help='maximal packet size to stop tracing'
-                                   ' (default 256MB)')
+                                   ' (default 64MB)')
     trace_parser.add_argument('-o', '--output', type=str,
                               metavar='file', default='trace.data',
                               help='filename to save trace log'

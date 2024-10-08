@@ -212,16 +212,16 @@ class _TracePMU(PMU):
 
 
 def profile_trace(args) -> None:
+    # start profiling
+    pmu, events = start_profile(args, _TracePMU)
+    pmu = cast(_TracePMU, pmu)
+    events = [cast(_TraceEvent, event) for event in events]
     msg = f'stop when recorded packet size reaches {args.max_size}MB, or '
     if args.timeout > 0:
         msg += f'after {args.timeout} msec'
     else:
         msg += 'ctrl-c to stop immediately'
     print(msg)
-    # start profiling
-    pmu, events = start_profile(args, _TracePMU)
-    pmu = cast(_TracePMU, pmu)
-    events = [cast(_TraceEvent, event) for event in events]
     # save events to pmu singleton to save packets on exit
     pmu.events = events
     if args.tracetag:
