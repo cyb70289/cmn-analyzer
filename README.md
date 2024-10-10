@@ -1,5 +1,4 @@
-NOTES
-=====
+## NOTES
 This tool controls CMN registers directly in user space. It conflicts with
 arm-cmn kernel driver. Do not profile CMN with perf and cmn-analyzer at the
 same time. Also, don't run two instances of cmn-analyzer, unless they are
@@ -10,10 +9,8 @@ are some settings may violate arm-cmn driver. If the Linux perf tool behaves
 abnormally at CMN profiling (e.g., all zero values) after cmn-analyzer runs,
 unload and reload arm-cmn kernel driver should fix the issue.
 
-
-Software modules
-================
-
+## Software modules
+```
                      +--------------+
                      | cmn-analyzer |
                      |  python code |
@@ -33,67 +30,62 @@ kernel mode                ||           | cmn-analyzer.ko |
                   /  CMN hardware   /            |
                  /  register space /<------------+
                 +-----------------+
+```
 
-cmn-analyzer
-------------
+### cmn-analyzer
 Python code counts and traces CMN flits per user inputs.
 
-iolib.so
---------
+### iolib.so
 A simple library implemented in C. It's called by python code to read/write
 memory mapped registers safely.
 
-cmn-analyzer.ko
----------------
+### cmn-analyzer.ko
 A kernel module maps CMN hardware registers to user space, so the python code
 can directly read/write CMN registers.
 
+## Build & Run
 
-Build & Run
-===========
-
-Build ko and so
----------------
-Run "make" to build both cmn-analyzer.ko and iolib.so.
+### Build ko and so
+Run `make` to build both cmn-analyzer.ko and iolib.so.
 Make sure kernel module build environment is ready (e.g., kernel headers).
 
-Load kernel module
-------------------
-$ sudo insmod ko/cmn-analyzer.ko
+### Load kernel module
+`$ sudo insmod ko/cmn-analyzer.ko`
 
-Run cmn-analyzer
-----------------
+### Run cmn-analyzer
+```
 # dump mesh info
-$ ./cmn-analyzer.sh info -h
+`$ ./cmn-analyzer.sh info -h`
 
 # count flits like "perf stat"
-$ ./cmn-analyzer.sh stat -h
+`$ ./cmn-analyzer.sh stat -h`
 
 # trace flits
-$ ./cmn-analyzer.sh trace -h
+`$ ./cmn-analyzer.sh trace -h`
 
 # analyse trace logs
-$ ./cmn-analyzer.sh report -h
+`$ ./cmn-analyzer.sh report -h`
+```
 
+## Event format
+Specify watchpoint events to be counted or traced by `-e event1 -e event2 ...`.
 
-Event format
-============
-We should provide watchpoint events to be counted or traced by "-e event".
-Event must be in the form "cmnX/k1=v1,k2=v2,.../".
-Multiple events can be specified by "-e event1 -e event2".
+Event must be in the form `cmnX/k1=v1,k2=v2,.../`.
 
-e.g., cmn0/xp=8,port=0,up,group=0,channel=dat,opcode=compdata,resp=1,datasrc=7/
+### Example
+**cmn0/xp=8,port=0,up,group=0,channel=dat,opcode=compdata,resp=1,datasrc=7/**
 
-Mandatory args
---------------
+### Mandatory args
+```
 - cmn0: cmn id
-- xp=8: XP node id
+- xp=8: cross point node id
 - up|down: watch upload or download flits
-- channel=req|rsp|snp|dat: request, response, snoop or data channel
+- group=0|1|2: select match group
+- channel=req|rsp|snp|dat: select request, response, snoop or data channel
+```
 
-Optional args
--------------
-- group=0|1|2: match group, default 0
+### Optional args
+```
 - opcode="value": check cmn-analyzer/flits/opcode700.csv for opcode per channel,
                   "value" can be number or command string (case insensitive)
                   e.g., opcode=CompData, opcode=compdata, opcode=0x04
@@ -104,13 +96,13 @@ Optional args
                    e.g., to match request channel group0 field "SRCIC|TGTID"
                    * cmn0/...,up,...,tgtid=8/ matches tgtid for upload flit
                    * cmn0/...,down,...,srcid=8/ matches srcid for download flit
+```
 
-
-Count flits
-===========
+## Count flits
 Similar to perf stat, it counts flits per watchpoint settings.
 
-Example: CPU0(xp=136,port=1) writes to cache line uniquely in CPU2(nodeid=268)
+### Example
+**CPU0(xp=136,port=1) updates cache line uniquely held by CPU2(nodeid=268)**
 
 Below command counts ReadUnique flits from CPU0 to HN-F nodes through request
 channel, and CompData flits from CPU2 to CPU0 through data channel.
@@ -134,9 +126,7 @@ cmn0-xp136-port1-up-grp0-req-readunique                               12,386,917
 cmn0-xp136-port1-down-grp0-dat-compdata-srcid268                      24,773,678
 ```
 
-
-Trace flits
-===========
+## Trace flits
 cmn-analyzer can trace and log control flits to disk for later analysis. This
 is very useful in practice. E.g., to find the physical address of ReadNoSnp
 requests to an SNF node.
@@ -150,9 +140,11 @@ tracetag generation for later packets in same transaction. For other events,
 watchpoint matches are ignored (wp_val and wp_mask are reset to 0), they will
 be matched by tracetag.
 
-Example: CPU0(xp=136,port=1) writes to cache line uniquely in CPU2(nodeid=268)
+### Example
+**CPU0(xp=136,port=1) updates cache line uniquely held by CPU2(nodeid=268)**
 
-- Case1: traces CPU0 upload flits through request channel
+### Case1: traces CPU0 upload flits through request channel
+
 ```
 # trace all requests sent from CPU0
 $ ./cmn-analyzer.sh trace \
@@ -182,7 +174,7 @@ $ ./cmn-analyzer.sh report -n 5 -v
 ['140', '777', '129', 'ReadUnique', '0', '1', '10003ab19000', '12388']
 ```
 
-- Case2: trace CPU0 ReadUnique requests and correspondent CompData flits back
+### Case2: trace CPU0 ReadUnique requests and correspondent CompData flits
 ```
 # trace CPU0 ReadUnique and downloads, enable tracetag
 $ ./cmn-analyzer.sh trace \
