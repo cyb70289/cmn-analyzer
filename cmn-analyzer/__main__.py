@@ -97,7 +97,7 @@ def load_mesh_info(args):
     with open(args.input, 'r') as file:
         json_data = file.read()
     mesh_info = json.loads(json_data)
-    logging.info(f'Loaded mesh info from {args.input}')
+    logger.info(f'Loaded mesh info from {args.input}')
     if args.verbose:
         pprint(mesh_info, indent=2)
     return mesh_info
@@ -109,7 +109,7 @@ def generate_mesh_info(mesh, args) -> None:
     if args.output:
         with open(args.output, 'w') as f:
             f.write(info_json)
-        logging.info(f'Saved mesh info to {args.output}')
+        logger.info(f'Saved mesh info to {args.output}')
         exit(0)
 
 
@@ -123,7 +123,7 @@ def main():
         else:
             iodrv = CmnIodrv(args.mesh, readonly=True)
             mesh = Mesh(iodrv)
-            logging.info(f'CMN mesh{args.mesh} probed')
+            logger.info(f'CMN mesh{args.mesh} probed')
             mesh_info = generate_mesh_info(mesh, args)
     elif args.cmd == 'stat':
         profile_stat(args)

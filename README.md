@@ -140,6 +140,20 @@ tracetag generation for later packets in same transaction. For other events,
 watchpoint matches are ignored (wp_val and wp_mask are reset to 0), they will
 be matched by tracetag.
 
+**NOTE: TraceTag is not fully functional**
+
+TraceTag is useful to measure transaction latency. It's necessary to capture
+a flit pair (the request flit and response or data flit). The approach is to
+enable sample profile in DTM by programming por_dtm_pmsirr with appropriate
+reload counter value. It's supposed to capture one flit (with tracetag=1) per
+reload counter flits to help identify paired flits clearly.
+
+Unfortunately, it does NOT work in my test. Still see flooding flits overflow
+trace buffer very fast. And confusingly, I never see flits with tracetag=1, but
+the tracetag function looks work correctly. E.g., program RN-F upload requests
+in WP0, program RN-F download data in WP2 with impossible matching condition
+wp_val = wp_mask = 0; WP2 observes data flits only if WP0 enables tracetag.
+
 ### Example
 **CPU0(xp=136,port=1) updates cache line uniquely held by CPU2(nodeid=268)**
 

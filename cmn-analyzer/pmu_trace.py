@@ -106,24 +106,21 @@ class _TraceDTC(DTC):
         por_dt_trace_control[8] = 1  # cc_enable
         self.dtc_node.write_off(0x0A30, por_dt_trace_control.value)
 
-    def enable0(self) -> None:
-        # enable dtc
-        super().enable0()
-
 
 class _TraceDTM(DTM):
     def configure(self, event:Event) -> Any:
+        event = cast(_TraceEvent, event)
         # configure watchpoint
         wp_index = super().configure(event)
         # program por_dtm_wp0-3_config to trace control flit with cycle count
         por_dtm_wp_config = self.xp_node.read_off(0x21A0+24*wp_index)
-        por_dtm_wp_config[10] = 1               # wp_pkt_gen
-        por_dtm_wp_config[11, 13] = 0b100       # wp_pkt_type
-        por_dtm_wp_config[14] = 1               # wp_cc_en
+        por_dtm_wp_config[10] = 1          # wp_pkt_gen
+        por_dtm_wp_config[11, 13] = 0b100  # wp_pkt_type
+        por_dtm_wp_config[14] = 1          # wp_cc_en
         self.xp_node.write_off(0x21A0+24*wp_index, por_dtm_wp_config.value)
         # enable trace fifo
         por_dtm_control = self.xp_node.read_off(0x2100)
-        por_dtm_control[3] = 1  # trace_no_atb
+        por_dtm_control[3] = 1      # trace_no_atb
         self.xp_node.write_off(0x2100, por_dtm_control.value)
         # save pmu info to event object
         event.save_pmu_info(self, wp_index)
@@ -132,9 +129,6 @@ class _TraceDTM(DTM):
         por_dtm_control = self.xp_node.read_off(0x2100)
         por_dtm_control[1] = 1  # trace_tag_enable
         self.xp_node.write_off(0x2100, por_dtm_control.value)
-
-    def enable(self) -> None:
-        super().enable()
 
 
 class _TracePMU(PMU):

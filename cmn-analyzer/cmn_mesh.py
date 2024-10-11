@@ -149,7 +149,7 @@ class NodeCFG(_NodeBase):
 
     def _probe_xp(self) -> List[NodeMXP]:
         xp_list = []
-        logging.debug(f'found {self._child_count} cross points')
+        logger.debug(f'found {self._child_count} cross points')
         for i in range(self._child_count):
             child_ptr_offset = self._child_ptr_offset + i*8
             child_ptr = self.read_off(child_ptr_offset)
@@ -180,7 +180,7 @@ class NodeCFG(_NodeBase):
             return xdim, ydim
 
         xdim, ydim = _get_mesh_dimension()
-        logging.debug(f'dimension: x = {xdim}, y = {ydim}')
+        logger.debug(f'dimension: x = {xdim}, y = {ydim}')
         # caclulate x, y for all cross points and populate xps[x,y] 2D array
         xps = [[None] * ydim for _ in range(xdim)]
         for xp in xp_list:
@@ -191,7 +191,7 @@ class NodeCFG(_NodeBase):
     def _multi_dtm_enabled(self) -> bool:
         multi_dtm_enabled = self.read_off(0x900)[63]
         if multi_dtm_enabled:
-            logging.warning('detected multiple dtm, unsupported')
+            logger.warning('detected multiple dtm, unsupported')
         return multi_dtm_enabled != 0
 
 
@@ -215,21 +215,21 @@ class NodeMXP(_NodeBase):
     '''
     type = 'XP'
     def __init__(self, parent, node_info, reg_base:int) -> None:
-        logging.debug('Probing cross point ...')
+        logger.debug('Probing cross point ...')
         super().__init__(parent, node_info, reg_base)
         # least 3 bits (port, device) of XP node id must be 0
         assert (self.node_id & 7) == 0
-        logging.debug(f'nodeid = {self.node_id}')
+        logger.debug(f'nodeid = {self.node_id}')
         port_count = node_info[48, 51]
-        logging.debug(f'ports = {port_count}')
+        logger.debug(f'ports = {port_count}')
         # dtc domain
         self.dtc_domain = self._get_dtc_domain()
-        logging.debug(f'dtc = {self.dtc_domain}')
+        logger.debug(f'dtc = {self.dtc_domain}')
         # port_devs: [('dev_type', dev_count)], dev_count may be 0
         self.port_devs = self._probe_ports(port_count)
         # _child_nodes: [_NodeHNF(), _NodeRND(), ...], RNF/SNF not included
         self._child_nodes = self._probe_devices()
-        logging.debug('---------------------------')
+        logger.debug('---------------------------')
 
     def get_dev_node_id(self, p:int, d:int) -> int:
         port_count = len(self.port_devs)
@@ -248,11 +248,11 @@ class NodeMXP(_NodeBase):
         return node_id
 
     def update(self, xdim:int, ydim:int) -> None:
-        logging.debug(f'Updating cross point {self.node_id} ...')
+        logger.debug(f'Updating cross point {self.node_id} ...')
         self.x, self.y = self._update_xypd(xdim, ydim)
         # child_nodes: {(port_id, dev_id): [nodes]}
         self.child_nodes = self._populate_child_nodes()
-        logging.debug('~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        logger.debug('~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
     def reset(self) -> None:
         # clear registers
@@ -263,6 +263,8 @@ class NodeMXP(_NodeBase):
             0x21A0, 0x21A0+24, 0x21A0+48, 0x21A0+72, # por_dtm_wp0-3_config
             0x21A8, 0x21A8+24, 0x21A8+48, 0x21A8+72, # por_dtm_wp0-3_val
             0x21B0, 0x21B0+24, 0x21B0+48, 0x21B0+72, # por_dtm_wp0-3_mask
+            0x2200,                                  # por_dtm_pmsicr
+            0x2208,                                  # por_dtm_pmsirr
             0x2220,                                  # por_dtm_pmevcnt
             0x2240,                                  # por_dtm_pmevcntsr
         )
@@ -278,7 +280,7 @@ class NodeMXP(_NodeBase):
         xy_id = self.node_id >> 3
         x = xy_id >> xshift
         y = xy_id & ((1 << xshift) - 1)
-        logging.debug(f'x = {x}, y = {y}')
+        logger.debug(f'x = {x}, y = {y}')
         for node in self._child_nodes:
             node.update_port_device_no(len(self.port_devs))
         return x, y
@@ -286,18 +288,18 @@ class NodeMXP(_NodeBase):
     def _populate_child_nodes(self) -> Dict[Tuple[int, int], List[_NodeBase]]:
         child_nodes = {}
         for p, (dev_type, dev_count) in enumerate(self.port_devs):
-            logging.debug(f'port{p}: type={dev_type}, dev_count={dev_count}')
+            logger.debug(f'port{p}: type={dev_type}, dev_count={dev_count}')
             for d in range(dev_count):
                 child_nodes[(p, d)] = []
         for i, node in enumerate(self._child_nodes):
             if (node.p, node.d) not in child_nodes:
-                logging.debug('ignore out of bound child node '
-                                f'at XP{self.node_id} port{node.p} '
-                                f'device{node.d} {node.type}')
+                logger.debug('ignore out of bound child node '
+                             f'at XP{self.node_id} port{node.p} '
+                             f'device{node.d} {node.type}')
                 continue
-            logging.debug(f'child{i}: p={node.p}, d={node.d}, '
-                          f'dev_type={self.port_devs[node.p][0]}, '
-                          f'node_type={node.type}')
+            logger.debug(f'child{i}: p={node.p}, d={node.d}, '
+                         f'dev_type={self.port_devs[node.p][0]}, '
+                         f'node_type={node.type}')
             child_nodes[(node.p, node.d)].append(node)
         return child_nodes
 
@@ -318,11 +320,11 @@ class NodeMXP(_NodeBase):
             if dev_count > 0:
                 # strip extensions for log output: RN-F_CHID_ESAM -> RN-F
                 dev_type = dev_type.split('_', 1)[0]
-                logging.debug(f'p{i}: {dev_type}, {dev_count}')
+                logger.debug(f'p{i}: {dev_type}, {dev_count}')
         return port_devs
 
     def _probe_devices(self) -> List[_NodeBase]:
-        logging.debug(f'childs = {self._child_count}')
+        logger.debug(f'childs = {self._child_count}')
         nodes = []
         for i in range(self._child_count):
             child_ptr = self.read_off(self._child_ptr_offset + i*8)

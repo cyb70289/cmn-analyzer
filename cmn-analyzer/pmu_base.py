@@ -23,11 +23,12 @@ class Event(ABC):
     - direction    str:up|down
     - group        int
     - matches      dict(str,str)
+    - user_args    dict(str,str)
     - wp_val_mask  (int,int)
     - name         str
     '''
     def __init__(self, event_str:str) -> None:
-        logging.info(f'parse event "{event_str}"')
+        logger.info(f'parse event "{event_str}"')
         self._parse_event_str(event_str.lower())
         self._verify_args()
         self.wp_val_mask = self._calc_wp_val_mask()
@@ -45,7 +46,8 @@ class Event(ABC):
         # optional args
         group = None
         matches = {}
-        # cmn0/xp=10,up,port=0,channel=req,opcode=all,group=0,resp=1,datasrc=7/
+        user_args = {}
+        # cmn0/xp=10,up,port=0,channel=req,group=0,resp=1,datasrc=7,%user=abc/
         event_str = event_str.lower()
         assert event_str[:3] == 'cmn'
         parts = event_str.strip('/').split('/')
@@ -69,7 +71,12 @@ class Event(ABC):
                     if channel not in valid_channels:
                         raise Exception(f'invalid channel: {channel}, '
                                         f'must be in {valid_channels}')
+                elif key.startswith('%'):
+                    # user defined args
+                    if key not in user_args: user_args[key] = value
+                    else: raise Exception(f'duplicated {key}=v')
                 else:
+                    # match group fields
                     if key not in matches: matches[key] = value
                     else: raise Exception(f'duplicated {key}=v')
             elif item in ('up', 'down'):
@@ -92,6 +99,7 @@ class Event(ABC):
         self.mesh, self.xp_nid, self.port = mesh, xp_nid, port
         self.channel, self.direction, self.group = channel, direction, group
         self.matches = matches
+        self.user_args = user_args
         self.chn_sel = {'req':0, 'rsp':1, 'snp':2, 'dat':3}[channel]
         # construct event name: cmn0-xp100-port1-up-grp0-req-opcode-lpid0-...
         self.name = f'cmn{mesh}-xp{xp_nid}-port{port}-{direction}' \
@@ -107,8 +115,8 @@ class Event(ABC):
     def _calc_wp_val_mask(self) -> Tuple[int, int]:
         value, mask = \
                 flit.get_wp_val_mask(self.channel, self.group, self.matches)
-        logging.info(f'wp_val=0x{(value & ((1<<64)-1)):016x}, '
-                     f'wp_mask=0x{(mask & ((1<<64)-1)):016x}')
+        logger.info(f'wp_val=0x{(value & ((1<<64)-1)):016x}, '
+                    f'wp_mask=0x{(mask & ((1<<64)-1)):016x}')
         return value, mask
 
     def _verify_args(self) -> None:
@@ -212,7 +220,7 @@ class PMU(ABC):
         if cmn_index not in self.meshes:
             iodrv = CmnIodrv(cmn_index, readonly=False)
             self.meshes[cmn_index] = Mesh(iodrv)
-            logging.info(f'cmn{cmn_index} probed')
+            logger.info(f'cmn{cmn_index} probed')
         return self.meshes[cmn_index]
 
     def get_dtm(self, cmn_index:int, xp_nid:int) -> DTM:
@@ -224,7 +232,7 @@ class PMU(ABC):
             # "DTM" attribute only defined in derived class
             dtm = self.DTM(xp_node, dtc, dtc0)  # type: ignore
             self.dtms[(cmn_index, xp_nid)] = dtm
-            logging.debug(f'dtm probed at cmn{cmn_index} nodeid={xp_nid}')
+            logger.debug(f'dtm probed at cmn{cmn_index} nodeid={xp_nid}')
         return self.dtms[(cmn_index, xp_nid)]
 
     def get_dtc(self, cmn_index:int, dtc_domain:int) -> DTC:
@@ -233,7 +241,7 @@ class PMU(ABC):
             # "DTC" attribute only defined in derived class
             dtc = self.DTC(dtc_node)  # type: ignore
             self.dtcs[(cmn_index, dtc_domain)] = dtc
-            logging.debug(f'dtc probed at cmn{cmn_index} domain={dtc_domain}')
+            logger.debug(f'dtc probed at cmn{cmn_index} domain={dtc_domain}')
         return self.dtcs[(cmn_index, dtc_domain)]
 
     # sequence: dtm, dtc0
