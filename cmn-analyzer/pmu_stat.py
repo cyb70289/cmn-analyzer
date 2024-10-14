@@ -115,7 +115,7 @@ class _StatPMU(PMU):
             yield event.name, counter
 
 
-def profile_stat(args) -> None:
+def pmu_stat(args) -> None:
     # start profiling
     pmu, events = start_profile(args, _StatPMU)
     pmu = cast(_StatPMU, pmu)

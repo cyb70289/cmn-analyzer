@@ -205,7 +205,7 @@ class _TracePMU(PMU):
         print(f'total packets:{total_packets:,}, file size:{file_size:,}')
 
 
-def profile_trace(args) -> None:
+def pmu_trace(args) -> None:
     # start profiling
     pmu, events = start_profile(args, _TracePMU)
     pmu = cast(_TracePMU, pmu)

@@ -83,7 +83,7 @@ class _DatFlit(_Flit):
     }
 
 
-def trace_report(args) -> None:
+def pmu_report(args) -> None:
     fn = args.input if args.input else 'trace.data'
     # file format defined in _TracePMU.save_packets()
     # it's a list of dict, each dict describes an event, with info and packets

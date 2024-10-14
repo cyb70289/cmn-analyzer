@@ -231,4 +231,3 @@ srcid,tgtid,txnid,opcode,homenid,dbid,resp,datasrc,cbusy,cycle
 
 ## TODO
 - erratum 3688582 (kampos-4761) mitigation
-- calculate cmn frequency

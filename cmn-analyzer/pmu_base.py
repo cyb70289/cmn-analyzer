@@ -218,7 +218,7 @@ class PMU(ABC):
 
     def get_mesh(self, cmn_index:int) -> Mesh:
         if cmn_index not in self.meshes:
-            iodrv = CmnIodrv(cmn_index, readonly=False)
+            iodrv = CmnIodrv(cmn_index)
             self.meshes[cmn_index] = Mesh(iodrv)
             logger.info(f'cmn{cmn_index} probed')
         return self.meshes[cmn_index]
