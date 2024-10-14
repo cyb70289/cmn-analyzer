@@ -228,3 +228,7 @@ srcid,tgtid,txnid,opcode,homenid,dbid,resp,datasrc,cbusy,cycle
 268,140,129,CompData,801,0,6,4,0,6067
 268,140,129,CompData,801,0,6,4,0,31440
 ```
+
+## TODO
+- erratum 3688582 (kampos-4761) mitigation
+- calculate cmn frequency
