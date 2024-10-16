@@ -230,4 +230,8 @@ srcid,tgtid,txnid,opcode,homenid,dbid,resp,datasrc,cbusy,cycle
 ```
 
 ## TODO
+- visualize cmn mesh
+- sample profile
+- count flits for all devices (or per device type)
+- MPAM
 - erratum 3688582 (kampos-4761) mitigation
