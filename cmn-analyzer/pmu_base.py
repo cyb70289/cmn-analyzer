@@ -21,17 +21,22 @@ class Event(ABC):
     - channel      str:req|rsp|snp|dat
     - chn_sel      int:  0|  1|  2|  3
     - direction    str:up|down
-    - group        int
-    - matches      dict(str,str)
+    - match_groups dict{
+        key: group       int
+        val: matches     dict(str,str)
+      }
+    - wp_val_masks dict{
+        key: group       int
+        val: wp_val_mask (int,int)
+      }
     - user_args    dict(str,str)
-    - wp_val_mask  (int,int)
     - name         str
     '''
     def __init__(self, event_str:str) -> None:
         logger.info(f'parse event "{event_str}"')
         self._parse_event_str(event_str.lower())
         self._verify_args()
-        self.wp_val_mask = self._calc_wp_val_mask()
+        self.wp_val_masks = self._calc_wp_val_masks()
 
     @abstractmethod
     def save_pmu_info(self, *args, **kwargs): pass
@@ -44,14 +49,17 @@ class Event(ABC):
         channel = None
         direction = None
         # optional args
-        group = None
-        matches = {}
+        match_groups = {}
         user_args = {}
         # cmn0/xp=10,up,port=0,channel=req,group=0,resp=1,datasrc=7,%user=abc/
+        # cmn0/...,channel=req,group=0,opcode=readunique,group=1,tracetag=1/
         event_str = event_str.lower()
         assert event_str[:3] == 'cmn'
         parts = event_str.strip('/').split('/')
         mesh = int(parts[0][3:])
+        assert mesh >= 0
+        current_group = 0
+        current_matches = match_groups.setdefault(0, {})
         for item in parts[1].split(','):
             if '=' in item:
                 key, value = item.split('=')
@@ -61,9 +69,13 @@ class Event(ABC):
                 elif key == 'port':
                     if port is None: port = int(value, 0)
                     else: raise Exception('duplicated port=n')
+                    assert 0 <= port < 6
                 elif key == 'group':
-                    if group is None: group = int(value, 0)
-                    else: raise Exception('duplicated group=n')
+                    new_group = int(value, 0)
+                    assert 0 <= new_group <= 2
+                    if new_group != current_group:
+                        current_group = new_group
+                        current_matches = match_groups.setdefault(new_group, {})
                 elif key == 'channel':
                     if channel is None: channel = value
                     else: raise Exception('duplicated channel=n')
@@ -77,7 +89,7 @@ class Event(ABC):
                     else: raise Exception(f'duplicated {key}=v')
                 else:
                     # match group fields
-                    if key not in matches: matches[key] = value
+                    if key not in current_matches: current_matches[key] = value
                     else: raise Exception(f'duplicated {key}=v')
             elif item in ('up', 'down'):
                 if direction is None: direction = item
@@ -89,41 +101,47 @@ class Event(ABC):
         if port is None: raise Exception('missing port=n')
         if channel is None: raise Exception('missing channel=req|rsp|snp|dat')
         if direction is None: raise Exception('missing up|down')
-        # optional args
-        if group is None: group = 0
-        # quick validatation
-        assert mesh >= 0
-        assert 0 <= port < 6
-        assert 0 <= group < 3
         # populate exported variables
         self.mesh, self.xp_nid, self.port = mesh, xp_nid, port
-        self.channel, self.direction, self.group = channel, direction, group
-        self.matches = matches
+        self.channel, self.direction = channel, direction
         self.user_args = user_args
         self.chn_sel = {'req':0, 'rsp':1, 'snp':2, 'dat':3}[channel]
+        # remove empty match groups, but leave at least one
+        self.match_groups = {}
+        for group, matches in match_groups.items():
+            if matches:
+                self.match_groups[group] = matches
+        if not self.match_groups:
+            self.match_groups[0] = {}
+        if len(self.match_groups) > 2: raise Exception('too many match groups')
         # construct event name: cmn0-xp100-port1-up-grp0-req-opcode-lpid0-...
-        self.name = f'cmn{mesh}-xp{xp_nid}-port{port}-{direction}' \
-                    f'-grp{group}-{channel}-'
-        if 'opcode' in self.matches:
-            self.name += self.matches['opcode']
-        else:
-            self.name += 'all'
-        for k, v in self.matches.items():
-            if k != 'opcode':
-                self.name += f'-{k}{v}'  # v must be a number
+        self.name = f'cmn{mesh}-xp{xp_nid}-port{port}-{direction}-{channel}'
+        for group, matches in self.match_groups.items():
+            if matches:
+                self.name += f'-grp{group}'
+                for k, v in matches.items():
+                    if k == 'opcode':
+                        self.name += f'-{v}'     # opcode can be a string
+                    else:
+                        self.name += f'-{k}{v}'  # v must be a number
 
-    def _calc_wp_val_mask(self) -> Tuple[int, int]:
-        value, mask = \
-                flit.get_wp_val_mask(self.channel, self.group, self.matches)
-        logger.info(f'wp_val=0x{(value & ((1<<64)-1)):016x}, '
-                    f'wp_mask=0x{(mask & ((1<<64)-1)):016x}')
-        return value, mask
+    def _calc_wp_val_masks(self) -> Dict[int, Tuple[int,int]]:
+        val_masks = {}
+        for group, matches in self.match_groups.items():
+            value, mask = \
+                    flit.get_wp_val_mask(self.channel, group, matches)
+            logger.info(f'group{group}: '
+                        f'wp_val=0x{(value & ((1<<64)-1)):016x}, '
+                        f'wp_mask=0x{(mask & ((1<<64)-1)):016x}')
+            val_masks[group] = (value, mask)
+        return val_masks
 
     def _verify_args(self) -> None:
-        if self.direction == 'up' and 'srcid' in self.matches:
-            raise Exception('only download watchpoint supports srcid')
-        if self.direction == 'down' and 'tgtid' in self.matches:
-            raise Exception('only upload watchpoint supports tgtid')
+        for _, matches in self.match_groups.items():
+            if self.direction == 'up' and 'srcid' in matches:
+                raise Exception('only download watchpoint supports srcid')
+            if self.direction == 'down' and 'tgtid' in matches:
+                raise Exception('only upload watchpoint supports tgtid')
 
 
 class DTC(ABC):
@@ -167,23 +185,38 @@ class DTM(ABC):
     def configure(self, event:Event) -> int:
         # get free wachpoint, 0,1:upload, 2,3:download
         wp_index = 0 if event.direction == 'up' else 2
-        if self.wp_in_use[wp_index]:
-            wp_index += 1
-        if self.wp_in_use[wp_index]:
-            raise Exception('no watchpoint available')
-        self.wp_in_use[wp_index] = True
-        # program por_dtm_wp0-3_val, por_dtm_wp0-3_mask
-        wp_val, wp_mask = event.wp_val_mask
-        self.xp_node.write_off(0x21A8+24*wp_index, wp_val)
-        self.xp_node.write_off(0x21B0+24*wp_index, wp_mask)
-        # program por_dtm_wp0-3_config
-        por_dtm_wp_config = self.xp_node.read_off(0x21A0+24*wp_index)
-        assert event.port < len(self.xp_node.port_devs)
-        por_dtm_wp_config[1, 3] = event.chn_sel     # wp_chn_sel
-        por_dtm_wp_config[0] = event.port & 1       # wp_dev_sel
-        por_dtm_wp_config[17, 18] = event.port >> 1 # wp_dev_sel2
-        por_dtm_wp_config[4, 5] = event.group       # wp_grp
-        self.xp_node.write_off(0x21A0+24*wp_index, por_dtm_wp_config.value)
+        if len(event.wp_val_masks) == 2:
+            # combined events needs two wp, 0 and 2 are the major wp
+            if self.wp_in_use[wp_index] or self.wp_in_use[wp_index+1]:
+                raise Exception('no watchpoints available')
+            self.wp_in_use[wp_index] = True
+            self.wp_in_use[wp_index+1] = True
+            # por_dtm_wp0|2_config.wp_combine = 1
+            por_dtm_wp_config = self.xp_node.read_off(0x21A0+24*wp_index)
+            por_dtm_wp_config[9] = 1  # wp_combine
+            self.xp_node.write_off(0x21A0+24*wp_index, por_dtm_wp_config.value)
+        elif len(event.wp_val_masks) == 1:
+            if self.wp_in_use[wp_index]:
+                wp_index += 1
+            if self.wp_in_use[wp_index]:
+                raise Exception('no watchpoint available')
+            self.wp_in_use[wp_index] = True
+        else:
+            assert False
+        for i, (group, wp_val_mask) in enumerate(event.wp_val_masks.items()):
+            _wp_index = wp_index + i
+            # program por_dtm_wp0-3_val, por_dtm_wp0-3_mask
+            wp_val, wp_mask = wp_val_mask
+            self.xp_node.write_off(0x21A8+24*_wp_index, wp_val)
+            self.xp_node.write_off(0x21B0+24*_wp_index, wp_mask)
+            # program por_dtm_wp0-3_config
+            por_dtm_wp_config = self.xp_node.read_off(0x21A0+24*_wp_index)
+            assert event.port < len(self.xp_node.port_devs)
+            por_dtm_wp_config[1, 3] = event.chn_sel     # wp_chn_sel
+            por_dtm_wp_config[0] = event.port & 1       # wp_dev_sel
+            por_dtm_wp_config[17, 18] = event.port >> 1 # wp_dev_sel2
+            por_dtm_wp_config[4, 5] = group             # wp_grp
+            self.xp_node.write_off(0x21A0+24*_wp_index, por_dtm_wp_config.value)
         return wp_index
 
     # must be called last

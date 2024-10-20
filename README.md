@@ -98,6 +98,12 @@ Event must be in the form `cmnX/k1=v1,k2=v2,.../`.
                    * cmn0/...,down,...,srcid=8/ matches srcid for download flit
 ```
 
+### Combine match groups
+Specify additional `group=n` to combine two match groups.
+
+E.g., `cmn0/...,group=0,opcode=readunique,group=1,tracetag=1/`
+matches ReadUnique flits with tracetag set
+
 ## Count flits
 Similar to perf stat, it counts flits per watchpoint settings.
 
@@ -232,6 +238,5 @@ srcid,tgtid,txnid,opcode,homenid,dbid,resp,datasrc,cbusy,cycle
 ## TODO
 - visualize cmn mesh
 - sample profile
-- count flits for all devices (or per device type)
 - MPAM
 - erratum 3688582 (kampos-4761) mitigation

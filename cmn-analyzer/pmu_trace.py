@@ -193,8 +193,7 @@ class _TracePMU(PMU):
                 'port': event.port,
                 'channel': event.channel,
                 'direction': event.direction,
-                'group': event.group,
-                'matches': event.matches,
+                'match_groups': event.match_groups,
                 'packets': event.packets if event.packets.size > 0 else None
             }
             pk_data.append(data)
@@ -222,9 +221,10 @@ def pmu_trace(args) -> None:
         # invalidate wp_val and wp_mask for all events except the first
         # one as only the first event triggers tracetag
         for event in events[1:]:
-            if event.matches:
-                logger.warning(f'matchgroup ignored: {event.matches}')
-            event.wp_val_mask = (0, 0)
+            for group, matches in event.match_groups.items():
+                if matches:
+                    logger.warning(f'ignored matchgroup{group}: {matches}')
+                event.wp_val_masks[group] = (0, 0)
             # reconstruct event name to make clear wp val and mask are ignored
             event.name = f'cmn{event.mesh}-xp{event.xp_nid}-port{event.port}' \
                          f'-{event.direction}-{event.channel}-tracetag'
