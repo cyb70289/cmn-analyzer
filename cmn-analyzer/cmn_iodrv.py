@@ -43,7 +43,7 @@ class CmnRegister:
 
 
 class CmnIodrv:
-    def __init__(self, mesh_id:int, readonly=False):
+    def __init__(self, mesh_id:int, readonly=False) -> None:
         dev_files = glob.glob(f'/dev/armcmn:CMN{mesh_id}:*')
         if not dev_files:
             raise Exception('cmn device file not found, '

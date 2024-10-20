@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import ctypes
 import logging
 import os
@@ -94,7 +92,7 @@ class _TraceEvent(Event):
         self.packets = PacketBuffer()
 
     # save pmu info for profiling
-    def save_pmu_info(self, dtm:_TraceDTM, wp_index:int) -> None:
+    def save_pmu_info(self, dtm:'_TraceDTM', wp_index:int) -> None:
         self.pmu_info = (dtm, wp_index)
 
 

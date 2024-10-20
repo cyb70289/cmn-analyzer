@@ -11,3 +11,6 @@ iolib:
 clean:
 	$(MAKE) -C ko clean
 	$(MAKE) -C iolib clean
+
+lint:
+	pyright cmn-analyzer

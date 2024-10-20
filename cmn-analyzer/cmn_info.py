@@ -23,9 +23,9 @@ def dump_mesh_info(args, mesh) -> None:
 
 def probe_mesh_freq(mesh) -> None:
     print('Probe CMN frequency... ', end='', flush=True)
+    dtc0 = mesh.dtcs[0]
     try:
         # check frequency by reading por_dt_pmccntr register on DTC
-        dtc0 = mesh.dtcs[0]
         # enable dtc, pmu
         dtc0.write_off(0x0A00, 1)  # por_dt_dtc_ctl.dt_en = 1
         dtc0.write_off(0x2100, 1)  # por_dt_pmcr.pmu_en = 1

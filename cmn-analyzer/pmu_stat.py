@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 import time
 from typing import cast, Any, Generator, List, Tuple, Union
@@ -12,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 class _StatEvent(Event):
     # save pmu info for profiling
-    def save_pmu_info(self, dtm:_StatDTM, wp_index:int, dtc_counter_index:int):
+    def save_pmu_info(self, dtm:'_StatDTM', wp_index:int,
+                      dtc_counter_index:int):
         self.pmu_info = (dtm, wp_index, dtc_counter_index)
 
 

@@ -221,10 +221,10 @@ class DTM(ABC):
 
     # must be called last
     def enable(self) -> None:
-        # enable dtm (cannot modify dtm registers after dtm_en is set)
+        # enable dtm (cannot modify dtm registers after dtm_enable is set)
         por_dtm_control = self.xp_node.read_off(0x2100)
         if por_dtm_control[0] == 0:
-            por_dtm_control[0] = 1  # dtm_en
+            por_dtm_control[0] = 1  # dtm_enable
             self.xp_node.write_off(0x2100, por_dtm_control.value)
 
 
