@@ -43,7 +43,7 @@ def parse_args():
                                    default=1000, metavar='msec',
                                    help='report interval (default 1000 ms)')
     stat_trace_parser.add_argument('-t', '--timeout', type=int,
-                                   default=0, metavar='sec',
+                                   default=0, metavar='msec',
                                    help='run time in ms (default no stop)')
     stat_parser = \
         subparsers.add_parser('stat', help='count events',
