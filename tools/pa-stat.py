@@ -34,9 +34,12 @@ import csv
 import os
 import sys
 from collections import defaultdict
+from typing import Dict, List, Tuple
 
 
-def read_pa_file(filename):
+# count occurences of page frames
+# e.g., pa_count[0x10002000] = 8, pa_count[0x10003000] = 5
+def read_pa_file(filename)-> Dict[int, int]:
     pa_counts = defaultdict(int)
     with open(filename, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
@@ -48,7 +51,10 @@ def read_pa_file(filename):
     return pa_counts
 
 
-def read_proc_maps(pid):
+# get address range for each entry in /proc/pid/maps
+# e.g., entry = "ffff87b59000-ffff885a9000 rwxp 00000000 00:00 0"
+#       return item = (0xffff87b59000, 0xffff885a9000, entry copied)
+def read_proc_maps(pid) -> List[Tuple[int, int, str]]:
     maps = []
     with open(f'/proc/{pid}/maps', 'r') as f:
         for line in f:
@@ -58,7 +64,8 @@ def read_proc_maps(pid):
     return maps
 
 
-def read_page_maps(pid, va_start, va_end):
+# return a dict maps pa to va
+def read_page_maps(pid, va_start, va_end) -> Dict[int, int]:
     pa_to_va = {}
     with open(f'/proc/{pid}/pagemap', 'rb') as f:
         for va in range(va_start, va_end, 4096):
@@ -87,22 +94,27 @@ def process_pa_file(pa_filename, pid):
     print(f'mapped {len(pa_to_va_map)} pa pages to va')
 
     known_pa, unknown_pa = 0, 0
-    map_counts = defaultdict(int)
+    # map_counts: key = entry in /proc/pid/maps,  value = [count, pages]
+    # - count: how many times this va entry occurs in all captured pa
+    # - pages: how many distinct pa pages are accessed from this va entry
+    map_counts = defaultdict(lambda: [0, 0])
     for pa, count in pa_counts.items():
         if pa in pa_to_va_map:
             known_pa += 1
             va = pa_to_va_map[pa]
             for start, end, map_entry in maps:
                 if start <= va < end:
-                    map_counts[map_entry] += count
+                    map_counts[map_entry][0] += count
+                    map_counts[map_entry][1] += 1
                     break
         else:
             unknown_pa += 1
     print(f'processed {known_pa} pa, ignored {unknown_pa} pa')
 
     result = []
-    for map_entry, count in map_counts.items():
-        result.append(f"{count:>6}, {map_entry}")
+    result.append(' count, pages, mapentry')
+    for map_entry, (count, pages) in map_counts.items():
+        result.append(f'{count:>6}, {pages:>5}, {map_entry}')
 
     result.sort(key=lambda x: int(x.split(',')[0]), reverse=True)
     return result
@@ -116,7 +128,7 @@ def main():
         print('must run as root')
         sys.exit(1)
     if len(sys.argv) != 3:
-        print("Usage: sudo python3 pa-stat.py <csv-file> <pid>")
+        print('Usage: sudo python3 pa-stat.py <csv-file> <pid>')
         sys.exit(1)
 
     pa_filename = sys.argv[1]

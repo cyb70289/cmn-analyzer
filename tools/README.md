@@ -20,7 +20,7 @@ RN-F node. Otherwise, we must caputre flits for all the HN-F nodes.
 # make sure code is not in page cache
 $ sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
 # bind test to CPU1
-$ numactl -m0 -C1 ~/marma/large_code_c./LargeCodeCacheMain
+$ numactl -m0 -C1 ~/marma/large_code_c/LargeCodeCacheMain
 ```
 
 ### capture request flits
@@ -61,16 +61,21 @@ write 901,089 records to __csv__/cmn0-xp136-port1-up-req-header.csv ...
 # must run as root to lookup /proc/pid/pagemap
 $ sudo python3 tools/pa-stat.py __csv__/cmn0-xp136-port1-up-req-header.csv `pgrep LargeCodeCache`
 
-187263, aaaaac770000-aaaaadb39000 r-xp 00000000 103:02 12605946                  /home/cyb/marma/large_code_c/LargeCodeCacheMain
- 97553, aaaaadb51000-aaaaadb9f000 rw-p 00000000 00:00 0
-  1132, aaaaadb50000-aaaaadb51000 rw-p 013d0000 103:02 12605946                  /home/cyb/marma/large_code_c/LargeCodeCacheMain
-    43, ffff91360000-ffff91362000 rw-p 00190000 103:02 50598608                  /usr/lib/aarch64-linux-gnu/libc.so.6
-    27, ffff911c0000-ffff91347000 r-xp 00000000 103:02 50598608                  /usr/lib/aarch64-linux-gnu/libc.so.6
-    12, ffff91362000-ffff9136f000 rw-p 00000000 00:00 0
-     6, aaaaadb4f000-aaaaadb50000 r--p 013cf000 103:02 12605946                  /home/cyb/marma/large_code_c/LargeCodeCacheMain
-     4, ffffdd727000-ffffdd748000 rw-p 00000000 00:00 0                          [stack]
+ count, pages, map entry
+210721,  4103, aaaaabdf0000-aaaaad1b9000 r-xp 00000000 103:02 12605946                  /home/cyb/marma/large_code_c/LargeCodeCacheMain
+115875,    78, aaaaad1d1000-aaaaad21f000 rw-p 00000000 00:00 0
+  1339,     1, aaaaad1d0000-aaaaad1d1000 rw-p 013d0000 103:02 12605946                  /home/cyb/marma/large_code_c/LargeCodeCacheMain
+    28,     1, ffffa7e90000-ffffa7e92000 rw-p 00190000 103:02 50598608                  /usr/lib/aarch64-linux-gnu/libc.so.6
+    16,     3, ffffa7cf0000-ffffa7e77000 r-xp 00000000 103:02 50598608                  /usr/lib/aarch64-linux-gnu/libc.so.6
+    14,     1, aaaaad1cf000-aaaaad1d0000 r--p 013cf000 103:02 12605946                  /home/cyb/marma/large_code_c/LargeCodeCacheMain
+     3,     1, ffffe9dc3000-ffffe9de4000 rw-p 00000000 00:00 0                          [stack]
 ```
-Each line is copied from /proc/pid/maps, with a number prepended to the first
-column, which counts SLC reads for that virtual address range.
+Each line is copied from /proc/pid/maps, with two columns prepended
+- count: how many times addresses within this va range are loaded from SLC
+- pages: how many distinct physical pages belong to this va range are loaded from SLC
+
+NOTE: normally, "pages * 4k" should be approximately equal to the size of va range.
+There may be considerable gap for PGO optimized code. E.g., though the code size is
+big, but PGO moves hot code close to each other.
 
 From above output, most SLC reads are for code section "r-xp".
