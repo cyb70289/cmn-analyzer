@@ -69,7 +69,7 @@ static acpi_status __init cmn_get_acpi_resource(struct acpi_resource *res,
 
 // called for each acpi device under \_SB
 static acpi_status __init cmn_get_acpi_dev(acpi_handle handle, u32 level,
-                                           void *, void **)
+                                           void *_, void **__)
 {
     acpi_status status;
     struct acpi_buffer buf;
@@ -143,7 +143,7 @@ static int __init cmn_find_dev(void)
     return 0;
 }
 
-static int cmn_open(struct inode *, struct file *filp)
+static int cmn_open(struct inode *_, struct file *filp)
 {
     struct miscdevice *misc_dev = filp->private_data;
     struct cmn_device *cmn_dev =
